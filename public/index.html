@@ -48,7 +48,7 @@ svg{display:block}
 /* ---------- shell ---------- */
 .shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
 /* Home Screen app: size from the full screen height (some iOS versions leave a gap at the bottom with inset:0) */
-@media (display-mode: standalone){.shell{bottom:auto;height:100vh;height:100lvh}}
+
 .top{flex:none;background:var(--tape);color:var(--on-tape);border-bottom:3px solid var(--ink);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .logo{font-family:var(--f-display);font-size:21px;background:var(--mustard);color:#111;padding:2px 10px 4px;transform:rotate(-2deg);border:2.5px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 var(--ink);line-height:1.1}
 .top-r{display:flex;align-items:center;gap:10px}
@@ -1452,16 +1452,33 @@ svg{display:block}
 
   // iPhone fixes: size the app from the full screen height in the Home Screen app, and undo the page shift
   // iOS sometimes leaves behind after the keyboard closes (which lifts the tab bar and hides content).
+  // Home Screen apps on some iOS versions report several different heights. The fixed-position viewport can be
+  // short by about the status bar's height, and 100lvh can be too tall by the same amount. The visual viewport
+  // (what's actually on screen) is used when the keyboard is closed; otherwise the page's own height.
+  function viewportInfo() {
+    var pr = document.createElement('div'); pr.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(pr); var lvh = pr.offsetHeight; pr.style.height = '100dvh'; var dvh = pr.offsetHeight; document.body.removeChild(pr);
+    return { vv: window.visualViewport ? Math.round(window.visualViewport.height) : 0, inner: window.innerHeight, client: document.documentElement.clientHeight,
+      lvh: lvh, dvh: dvh, screen: screen.width + 'x' + screen.height, shell: Math.round($shell.getBoundingClientRect().height), standalone: standalone };
+  }
   function fitShell() {
     try {
       if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0);
       if (!standalone) return;
-      var pr = document.createElement('div'); pr.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none';
-      document.body.appendChild(pr); var lvh = pr.offsetHeight; document.body.removeChild(pr);
-      var h = Math.min(Math.max(screen.height, screen.width), Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0, lvh || 0));
-      if (h > 0) { $shell.style.bottom = 'auto'; $shell.style.height = h + 'px'; }
+      var a = document.activeElement, typing = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
+      if (typing) return; // the keyboard changes the visible height; refit once it closes
+      var v = viewportInfo(), cap = Math.max(screen.height, screen.width);
+      var h = v.vv > 200 ? v.vv : v.client;
+      if (h > 200 && h <= cap) { $shell.style.bottom = 'auto'; $shell.style.height = h + 'px'; }
     } catch (e) {}
   }
+  // Hold the clock for a second to see the screen measurements (handy if the layout ever looks off).
+  var holdT = null;
+  document.addEventListener('pointerdown', function (e) { if (e.target.closest && e.target.closest('.clock')) holdT = setTimeout(function () {
+    var v = viewportInfo(); toast('Screen check · visible ' + v.vv + ' · window ' + v.inner + ' · page ' + v.client + ' · lvh ' + v.lvh + ' · dvh ' + v.dvh + ' · screen ' + v.screen + ' · app ' + v.shell + (v.standalone ? ' · home screen' : ' · browser'));
+    clearTimeout(toast.t); toast.t = setTimeout(function () { $toast.innerHTML = ''; }, 15000);
+  }, 900); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { document.addEventListener(ev, function () { clearTimeout(holdT); }); });
   document.addEventListener('focusout', function () { setTimeout(fitShell, 60); setTimeout(fitShell, 400); });
   window.addEventListener('resize', fitShell);
   window.addEventListener('orientationchange', function () { setTimeout(fitShell, 300); });
