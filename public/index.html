@@ -7,6 +7,9 @@
 <title>Ding!</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#FFFFFF">
+<meta name="color-scheme" content="light only">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
@@ -46,7 +49,9 @@ button{cursor:pointer;-webkit-appearance:none;appearance:none}
 svg{display:block}
 
 /* ---------- shell ---------- */
-.shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+/* iOS 26 colours the status-bar strip from the background of the fixed element at the top of the screen,
+   so the app frame is white; the graph paper lives on the scrolling area only. */
+.shell{position:fixed;inset:0;display:flex;flex-direction:column;background:#FFFFFF}
 /* Home Screen app: size from the full screen height (some iOS versions leave a gap at the bottom with inset:0) */
 
 .top{flex:none;background:var(--tape);color:var(--on-tape);border-bottom:3px solid var(--ink);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -337,6 +342,27 @@ svg{display:block}
 .bigbar .serve .label{display:none}
 .bigbar .servebar{gap:8px}
 
+/* open sheet re-drawn in place: no slide-up replay */
+.scrim.still,.scrim.still .sheet{animation:none}
+/* merged "Food is ready in" box */
+.mchips{display:flex;flex-wrap:wrap;gap:8px}
+.mchip{display:inline-flex;align-items:center;gap:6px;border:var(--bw) solid var(--ink);border-radius:10px;padding:4px 10px;font-weight:800;font-size:15px;color:#111;box-shadow:2px 2px 0 var(--ink)}
+.mchip svg{width:17px;height:17px}
+.hero.merged .badge{background:var(--lime);color:#111}
+.hero.merged .mchips{margin-top:4px}
+.tile.merged{gap:12px}
+.tile.merged .tl-h .nm{font-size:26px}
+.tile.merged .tl-cd{font-size:clamp(80px,27vw,150px)}
+.tile.merged .tl-cd.long{font-size:clamp(56px,18vw,110px)}
+.tile.merged .tl-k{font-size:17px}
+.biggrid.n1{grid-template-columns:1fr}
+.hero.merged .cdl{max-width:calc(100% - 136px)}
+/* long names or notes without spaces wrap instead of pushing past the screen edge */
+.then div>span,.pv>span,.pv b,.pv small,.fd-group h3,.pk .nm,.mchip,.note span,.lead,.toast span,.bn-t span,.legend span,.it-m,.it-note,.tl-sub,.serve .orig,.install p,.sheet .fd-entry .info b{overflow-wrap:anywhere;min-width:0}
+.then div>span{flex:1}
+.mchip{max-width:100%}
+.btn{max-width:100%;overflow-wrap:anywhere;text-align:center}
+
 </style>
 </head>
 <body>
@@ -590,12 +616,25 @@ svg{display:block}
     prefs.starterRemoved = true; save(K.prefs, prefs); save(K.foods, foods); save(K.draft, draft);
   }
   if (!draft) draft = newDraft();
-  var ui = { view: meal ? 'cook' : 'plan', big: !!prefs.big, search: '', filter: 'All', pickSearch: '', sheet: null, editServe: false };
+  var ui = { view: meal ? 'cook' : 'plan', big: !!prefs.big, search: '', filter: 'All', pickSearch: '', sheet: null, editServe: false, split: false };
+  freshenTime(Date.now());
   var lastKey = '', prevStatus = {}, undo = null;
 
-  function newDraft() {
-    var t = Math.ceil((Date.now() + 40 * MIN) / (15 * MIN)) * 15 * MIN;
-    return { items: [], time: hhmm(t), mode: 'together' };
+  // A new plan starts on "as soon as possible": it shows the current time, and as foods are added it follows the
+  // earliest moment everything can be ready. Picking a time yourself (or a quick button) switches that off.
+  function newDraft(mode) { return { items: [], time: hhmm(Date.now()), mode: mode || 'together', auto: true }; }
+  // Dinner times are today's. Only a time more than 6 hours in the past (e.g. 00:15 picked at 23:30) means tomorrow.
+  function todayAt(h, m, now) {
+    var d = new Date(now); d.setHours(h, m, 0, 0);
+    if (d.getTime() < now - 6 * 3600000) { d.setDate(d.getDate() + 1); d.setHours(h, m, 0, 0); }
+    return d.getTime();
+  }
+  function asapAt(now) { return draft.items.length ? E.earliestFinish(draft.items.map(function (i) { return i.minutes * MIN; }), now) : now; }
+  // A plan left sitting with a time that has already passed goes back to "as soon as possible".
+  function freshenTime(now) {
+    if (draft.auto) return;
+    var t = parseHHMM(draft.time);
+    if (!t || todayAt(t.h, t.m, now) < now - MIN) { draft.auto = true; saveDraft(); }
   }
   function draftItemFrom(f) { return { key: uid(), entryId: f.id, food: f.food, device: f.device, notes: f.notes || '', minutes: f.minutes, nudge: clone(f.nudge) || null, nudgeOff: false, sound: f.sound || null }; }
   function saveDraft() { save(K.draft, draft); }
@@ -623,7 +662,12 @@ svg{display:block}
       '<button class="iconbtn" data-act="mute" aria-label="' + (prefs.muted ? 'Turn alert sounds on' : 'Mute alert sounds') + '">' + icon(prefs.muted ? 'mute' : 'sound') + '</button></div>';
     $view.innerHTML = bigOn() ? viewBig(now) : installHint() + (ui.view === 'cook' ? viewCook(now) : ui.view === 'plan' ? viewPlan(now) : viewFoods());
     $tabs.innerHTML = '<div class="tabs-in">' + tab('cook', 'Cook', live(now)) + tab('plan', 'Plan') + tab('foods', 'Foods') + '</div>';
-    $overlay.innerHTML = ui.sheet ? sheetHtml() : '';
+    // Re-drawing an open sheet keeps its scroll position and doesn't replay the slide-up, so it never jumps.
+    var oldSheet = $overlay.querySelector('.sheet'), same = !!(oldSheet && ui.sheet && $overlay.getAttribute('data-kind') === ui.sheet.kind), keep = oldSheet ? oldSheet.scrollTop : 0;
+    var sh = ui.sheet ? sheetHtml() : '';
+    if (same) sh = sh.replace('class="scrim"', 'class="scrim still"');
+    $overlay.innerHTML = sh; $overlay.setAttribute('data-kind', ui.sheet ? ui.sheet.kind : '');
+    if (same) { var ns = $overlay.querySelector('.sheet'); if (ns) ns.scrollTop = keep; }
     lastKey = structureKey(now);
     bind(now);
   }
@@ -656,11 +700,13 @@ svg{display:block}
       h += '<div class="stk timecard"><label class="label" for="serveTime">New dinner time</label><div class="timerow"><div class="ticket"><small>Dinner at</small><input id="serveTime" class="timeinput num" type="time" value="' + hhmm(meal.targetAt) + '"></div></div>' +
         '<span class="lead" style="margin:0">Anything not started yet gets rescheduled.</span></div>';
     }
-    h += heroHtml(s);
-    h += '<div class="then" data-b="then"></div>';
+    var mi = mergeInfo(s), merged = mi && !ui.split;
+    h += merged ? mergedHero(mi) : heroHtml(s);
+    if (!merged) h += '<div class="then" data-b="then"></div>';
     if (!s.summary.allDone) h += '<section class="stk ringrow" aria-label="Timeline"><div data-b="rings"></div><div class="legend" data-b="legend"></div></section>';
     h += '<div class="seg" role="group" aria-label="If something runs late"><button data-act="mode" data-m="together" aria-pressed="' + together + '">Finish together</button><button data-act="mode" data-m="keep" aria-pressed="' + !together + '">Keep dinner time</button></div>';
-    h += '<ol class="items">' + order.map(function (r) { return itemCard(r, itemOf(r.id)); }).join('') + '</ol>';
+    if (mi && ui.split) h += '<button class="btn sm" data-act="merge" style="align-self:flex-start">Combine into one box</button>';
+    if (!merged) h += '<ol class="items">' + order.map(function (r) { return itemCard(r, itemOf(r.id)); }).join('') + '</ol>';
     h += '<div class="endrow"><button class="btn go" data-act="addOpen">' + icon('plus') + 'Add a food</button><button class="btn ghost" data-act="endMeal">' + (s.summary.allDone ? 'Clear finished meal' : 'End meal') + '</button></div>';
     return h;
   }
@@ -726,10 +772,32 @@ svg{display:block}
   }
 
   /* ---------- BIG SCREEN: every timer at once ---------- */
+  // When every food left is cooking, with no nudge to come, and all finish within the same minute,
+  // there's nothing to do until the end, so the foods merge into one "Food is ready in" box.
+  function mergeInfo(s) {
+    var act = s.rows.filter(function (r) { return r.status !== 'done'; });
+    if (act.length < 2) return null;
+    for (var i = 0; i < act.length; i++) if (act[i].status !== 'cooking' || act[i].nudgeAt != null) return null;
+    var lo = Math.min.apply(null, act.map(function (r) { return r.finishAt; })), hi = Math.max.apply(null, act.map(function (r) { return r.finishAt; }));
+    return hi - lo < MIN ? { rows: act, at: hi } : null;
+  }
+  function mergeChips(mi) {
+    return '<div class="mchips">' + mi.rows.map(function (r) { var it = itemOf(r.id); return '<span class="mchip" style="background:' + colorOf(it) + '">' + devIcon(it.device, '') + esc(it.food) + '</span>'; }).join('') + '</div>';
+  }
+  function mergedHero(mi) {
+    return '<section class="stk hero merged" style="min-height:196px" aria-live="polite"><span class="badge">ALL COOKING</span><h1 class="what">Food is ready in</h1>' +
+      '<span class="cdl" data-b="merge.at"></span>' +
+      '<div class="burst-o"><div class="burst" style="background:var(--mustard)"><span class="cd num" data-b="merge.cd"></span><span class="cdk">to go</span></div></div>' +
+      mergeChips(mi) + '<div class="act"><button class="btn big" data-act="split">Show each food</button></div></section>';
+  }
   function viewBig(now) {
     var s = sched(now);
     var bar = serveBar('<div style="display:flex;gap:8px"><button class="btn sm go" data-act="addOpen" aria-label="Add a food to this meal">' + icon('plus') + '</button><button class="btn sm" data-act="unbig">' + icon('small') + 'Exit</button></div>');
     if (s.summary.allDone) return bar + allDoneHero();
+    var mi = mergeInfo(s);
+    if (mi && !ui.split) return '<div class="bigbar">' + bar + '</div><div class="biggrid n1"><section class="tile merged" aria-label="All foods">' +
+      '<div class="tl-h"><span class="nm">Food is ready in</span></div><div class="tl-mid"><span class="tl-cd num" data-b="merge.big"></span><span class="tl-k" data-b="merge.atl"></span></div>' +
+      mergeChips(mi) + '<div class="tl-act"><button class="btn" data-act="split">Show each food</button></div></section></div>';
     var act = s.rows.filter(function (r) { return r.status !== 'done'; }); // tiles keep your order from Plan, so they never jump around
     var done = s.rows.filter(function (r) { return r.status === 'done'; });
     return '<div class="bigbar">' + bar + '</div><div class="biggrid n' + Math.min(act.length, 6) + '">' + act.map(function (r) { return tile(r, itemOf(r.id)); }).join('') + '</div>' +
@@ -799,7 +867,7 @@ svg{display:block}
     if (ui.view === 'cook' && meal) {
       var s = sched(now), sm = s.summary, together = meal.mode !== 'keep';
       b['serve.t'] = clock(sm.serveAt);
-      if (sm.delayMs > 0) {
+      if (sm.delayMs >= 30000) {
         b['serve.pill'] = { text: (together ? '+' + delta(sm.delayMs) : delta(sm.delayMs) + ' late'), cls: 'pill late' };
         b['serve.orig'] = { text: together ? 'Moved back from ' + clock(sm.targetAt) + ' so everything lands together.' : 'Something will be late. Everything else still aims for ' + clock(sm.targetAt) + '.', hidden: false };
       } else { b['serve.pill'] = { text: sm.allDone ? 'Served' : 'On time', cls: 'pill ok' }; b['serve.orig'] = { text: '', hidden: true }; }
@@ -827,6 +895,14 @@ svg{display:block}
         var it = itemOf(e.id), what = e.type === 'start' ? 'Start ' + it.food : e.type === 'nudge' ? nudgePhrase(it) : 'Take out ' + it.food;
         return '<div><i style="background:' + colorOf(it) + '"></i><b class="num">' + (e.urgent ? 'Now' : clock(e.at)) + '</b><span>' + esc(what) + '</span></div>';
       }).join('') + (s.events.length && !sm.allDone ? '<div><i style="background:var(--lime)"></i><b class="num">' + clock(sm.latestFinishAt) + '</b><span>Dinner’s up</span></div>' : '') };
+      var mg = mergeInfo(s);
+      if (mg) {
+        var left = countdown(mg.at - now);
+        b['merge.cd'] = { text: left, cls: 'cd num' + (left.length >= 6 ? ' long' : left.length === 5 ? ' mid' : '') };
+        b['merge.big'] = { text: left, cls: 'tl-cd num' + (left.length > 6 ? ' long' : '') };
+        b['merge.at'] = 'Ready at ' + clock(mg.at);
+        b['merge.atl'] = 'Ready at ' + clock(mg.at) + ' · nothing to do till then';
+      }
       b.rings = { html: ringsHtml(s, now) };
       b.legend = { html: legendHtml(s) };
       s.rows.forEach(function (r) {
@@ -879,11 +955,12 @@ svg{display:block}
   function structureKey(now) {
     if (!meal || ui.view !== 'cook') return ui.view;
     var s = sched(now);
-    return [ui.view, ui.big, meal.mode, s.rows.map(function (r) { return r.id + r.status + (r.nudgeDue ? 'n' : '') + (r.nudgeAt != null ? 'm' : ''); }).join(','), s.events.slice(0, 1).map(function (e) { return e.id + e.type + e.urgent; }).join(',')].join('|');
+    var mg = mergeInfo(s); if (!mg) ui.split = false;
+    return [ui.view, ui.big, !!mg, ui.split, meal.mode, s.rows.map(function (r) { return r.id + r.status + (r.nudgeDue ? 'n' : '') + (r.nudgeAt != null ? 'm' : ''); }).join(','), s.events.slice(0, 1).map(function (e) { return e.id + e.type + e.urgent; }).join(',')].join('|');
   }
 
   /* ---------- PLAN ---------- */
-  function draftTarget(now) { var t = parseHHMM(draft.time); return t ? E.nextOccurrence(t.h, t.m, now) : null; }
+  function draftTarget(now) { if (draft.auto) return asapAt(now); var t = parseHHMM(draft.time); return t ? todayAt(t.h, t.m, now) : null; }
   function draftMeal(now) {
     return { targetAt: draftTarget(now), mode: draft.mode, items: draft.items.map(function (d) { return { id: d.key, baseMs: d.minutes * MIN, adjustMs: 0, startedAt: null, doneAt: null }; }) };
   }
@@ -914,7 +991,7 @@ svg{display:block}
     h += '<div class="picker" id="pickResults">' + pickerHtml() + '</div>';
 
     h += stepH(2, 'Dinner time');
-    h += '<div class="stk timecard"><div class="timerow"><label class="ticket" for="finishTime"><small>Dinner at</small><input id="finishTime" class="timeinput num" type="time" value="' + esc(draft.time) + '"></label>' +
+    h += '<div class="stk timecard"><div class="timerow"><label class="ticket" for="finishTime"><small>Dinner at</small><input id="finishTime" class="timeinput num" type="time" value="' + esc(draft.auto ? hhmm(asapAt(now)) : draft.time) + '"></label>' +
       '<span class="tomorrow" id="tomorrowNote"></span></div>' +
       '<div class="chips"><button class="chip" data-act="quick" data-q="asap">ASAP</button><button class="chip" data-act="quick" data-q="30">In 30 min</button><button class="chip" data-act="quick" data-q="45">In 45 min</button><button class="chip" data-act="quick" data-q="60">In 1 hour</button></div></div>';
 
@@ -927,16 +1004,22 @@ svg{display:block}
     h += '<button class="btn primary big" data-act="startMeal"' + (draft.items.length && parseHHMM(draft.time) ? '' : ' disabled') + '>' + (live(now) ? 'Let’s cook! (replaces current meal)' : 'Let’s cook!') + '</button>';
     return h;
   }
+  function timeNote(now) {
+    var tom = document.getElementById('tomorrowNote'), fi = document.getElementById('finishTime'), target = draftTarget(now);
+    if (draft.auto && fi && document.activeElement !== fi) { var v = hhmm(target); if (fi.value !== v) fi.value = v; }
+    if (!tom) return;
+    var txt = draft.auto ? (draft.items.length ? 'As soon as possible' : 'Now') : (target != null && new Date(target).getDate() !== new Date(now).getDate() ? 'That’s tomorrow (' + new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(target)) + ')' : '');
+    if (tom.textContent !== txt) tom.textContent = txt;
+  }
   function previewHtml(now) {
+    timeNote(now);
     if (!draft.items.length) return '<p class="lead" style="margin:0">Add a food to see start times.</p>';
     var target = draftTarget(now);
     if (target == null) return '<p class="lead" style="margin:0">Set a dinner time to see start times.</p>';
     var dm = draftMeal(now), s = E.computeSchedule(dm, now);
     var ear = E.earliestFinish(dm.items.map(function (i) { return i.baseMs; }), now);
     var h = '';
-    var tom = document.getElementById('tomorrowNote');
-    if (tom) tom.textContent = new Date(target).getDate() !== new Date(now).getDate() ? 'That’s tomorrow (' + new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(target)) + ')' : '';
-    if (ear > target) {
+    if (!draft.auto && ear > target) {
       var longest = draft.items.slice().sort(function (a, b) { return b.minutes - a.minutes; })[0];
       h += '<div class="note warn" style="margin-bottom:12px"><span><b>Too soon!</b> ' + esc(longest.food) + ' needs ' + longest.minutes + ' min, so the earliest it can all be ready is ' + clock(ear) + '.</span>' +
         '<button class="btn sm" data-act="quick" data-q="asap">Make it ' + clock(ear) + '</button></div>';
@@ -1160,7 +1243,7 @@ svg{display:block}
     if (meal) requestWake();
   }
   // Actions that change nothing worth undoing keep any pending Undo; everything else replaces or clears it.
-  var KEEPS_UNDO = { nav: 1, mute: 1, hideInstall: 1, filter: 1, editServe: 1, big: 1, unbig: 1, manageMeals: 1, newFood: 1, editFood: 1, newFromPlan: 1, saveMeal: 1, saveMealFromCook: 1, sheetCancel: 1, sheetScrim: 1, sheetDev: 1, sheetMin: 1, sheetNudge: 1, sheetVerb: 1, sheetSound: 1, dismiss: 1, addOpen: 1, newFromCook: 1, undo: 1 };
+  var KEEPS_UNDO = { nav: 1, mute: 1, hideInstall: 1, filter: 1, editServe: 1, big: 1, unbig: 1, manageMeals: 1, newFood: 1, editFood: 1, newFromPlan: 1, saveMeal: 1, saveMealFromCook: 1, sheetCancel: 1, sheetScrim: 1, sheetDev: 1, sheetMin: 1, sheetNudge: 1, sheetVerb: 1, sheetSound: 1, dismiss: 1, addOpen: 1, newFromCook: 1, split: 1, merge: 1, undo: 1 };
 
   // Add a food to the meal that's already cooking. It slots into the same schedule: in "Finish together"
   // a food too long to make the current time moves dinner back; in "Keep dinner time" it shows as late.
@@ -1180,7 +1263,7 @@ svg{display:block}
     var now = Date.now(), id = el.getAttribute('data-id'), it, before = snapshot(), undoMsg = null;
     haptic();
     switch (a) {
-      case 'nav': if (ui.view !== el.getAttribute('data-v')) { ui.view = el.getAttribute('data-v'); $main.scrollTop = 0; } else { try { $main.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { $main.scrollTop = 0; } } break;
+      case 'nav': if (el.getAttribute('data-v') === 'plan') freshenTime(now); if (ui.view !== el.getAttribute('data-v')) { ui.view = el.getAttribute('data-v'); $main.scrollTop = 0; } else { try { $main.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { $main.scrollTop = 0; } } break;
       case 'mute': prefs.muted = !prefs.muted; save(K.prefs, prefs); toast(prefs.muted ? 'Alert sounds off' : 'Alert sounds on'); if (!prefs.muted) playTune(TUNES[0], 1); break;
       case 'hideInstall': prefs.hideInstall = true; save(K.prefs, prefs); break;
       case 'dismiss': { var dk = el.getAttribute('data-key'); banners = banners.filter(function (b) { return b.key !== dk; }); syncBanners(now); return; }
@@ -1196,7 +1279,11 @@ svg{display:block}
       case 'adj': it = itemOf(id); if (!it) return; it.adjustMs = E.adjustedMs(it, (+el.getAttribute('data-d')) * MIN, now); saveMeal(); break;
       case 'mode': meal.mode = el.getAttribute('data-m'); saveMeal(); break;
       case 'editServe': ui.editServe = !ui.editServe; break;
-      case 'endMeal': meal = null; saveMeal(); prevStatus = {}; ui.view = 'plan'; $main.scrollTop = 0; releaseWake(); undoMsg = 'Meal cleared'; break;
+      case 'endMeal':
+        meal = null; saveMeal(); prevStatus = {}; releaseWake();
+        draft = newDraft(draft.mode); saveDraft(); // a clean slate: no foods on Plan, nothing typed, time back to now
+        ui.pickSearch = ''; ui.addSearch = ''; ui.search = ''; ui.filter = 'All'; ui.split = false; ui.editServe = false;
+        ui.view = 'plan'; $main.scrollTop = 0; undoMsg = 'Table cleared'; break;
       case 'saveMealFromCook': openSaveSheet(meal.items.map(function (x) { return { entryId: null, food: x.food, device: x.device, notes: x.notes, minutes: Math.round(x.baseMs / MIN), nudge: clone(x.nudge) || null, nudgeOff: false, sound: x.sound || null }; }), meal.mode); return;
       // planning
       case 'pick': {
@@ -1210,9 +1297,9 @@ svg{display:block}
       case 'nudgeToggle': { var dn = draft.items[+el.getAttribute('data-i')]; dn.nudgeOff = !dn.nudgeOff; saveDraft(); break; }
       case 'quick': {
         var q = el.getAttribute('data-q'), t;
-        if (q === 'asap') t = E.earliestFinish(draft.items.map(function (i) { return i.minutes * MIN; }), now);
-        else t = Math.ceil((now + (+q) * MIN) / MIN) * MIN;
-        draft.time = hhmm(t); draft.example = false; saveDraft(); break;
+        if (q === 'asap') { draft.auto = true; draft.time = hhmm(asapAt(now)); }
+        else { t = Math.ceil((now + (+q) * MIN) / MIN) * MIN; draft.time = hhmm(t); draft.auto = false; }
+        draft.example = false; saveDraft(); break;
       }
       case 'dmode': draft.mode = el.getAttribute('data-m'); saveDraft(); break;
       case 'newFromPlan': openFoodSheet(null, true); return;
@@ -1236,6 +1323,8 @@ svg{display:block}
         draft.mode = m.mode || 'together'; draft.example = false; saveDraft(); ui.sheet = null; ui.view = 'plan'; $main.scrollTop = 0; undoMsg = 'Loaded “' + m.name + '”'; break;
       }
       case 'manageMeals': ui.sheet = { kind: 'meals' }; break;
+      case 'split': ui.split = true; break;
+      case 'merge': ui.split = false; break;
       case 'addOpen': ui.addSearch = ''; ui.sheet = { kind: 'add' }; break;
       case 'newFromCook': openFoodSheet(null, 'cook'); return;
       case 'addToMeal': { var af = foods.filter(function (x) { return x.id === id; })[0]; if (!af || !meal) return; ui.sheet = null; undoMsg = addFoodToMeal(af, now); break; }
@@ -1248,6 +1337,7 @@ svg{display:block}
       case 'deleteMeal': { var dm = saved.filter(function (x) { return x.id === id; })[0]; saved = saved.filter(function (x) { return x.id !== id; }); saveSaved(); undoMsg = 'Deleted “' + (dm ? dm.name : 'meal') + '”'; break; }
       case 'startMeal': {
         var target = draftTarget(now); if (target == null || !draft.items.length) return;
+        target = Math.max(target, asapAt(now)); // a time that can't be met any more means as soon as possible
         var replaced = live(now);
         meal = { id: uid(), createdAt: now, targetAt: target, mode: draft.mode, items: draft.items.map(function (d, i) {
           return { id: uid(), food: d.food, device: d.device, notes: d.notes, baseMs: d.minutes * MIN, adjustMs: 0, startedAt: null, doneAt: null, color: i % COLORS.length, nudge: d.nudgeOff ? null : clone(d.nudge) || null, nudgedAt: null, sound: d.sound || null };
@@ -1319,10 +1409,10 @@ svg{display:block}
     if (t.getAttribute('data-act') === 'method') {
       var d = draft.items[+t.getAttribute('data-i')], f = foods.filter(function (x) { return x.id === t.value; })[0];
       if (d && f) { d.entryId = f.id; d.device = f.device; d.minutes = f.minutes; d.notes = f.notes || ''; d.nudge = clone(f.nudge) || null; d.nudgeOff = false; d.sound = f.sound || null; draft.example = false; saveDraft(); render(); }
-    } else if (t.id === 'finishTime') { if (parseHHMM(t.value)) { draft.time = t.value; draft.example = false; saveDraft(); bind(Date.now()); } }
+    } else if (t.id === 'finishTime') { if (parseHHMM(t.value)) { draft.time = t.value; draft.auto = false; draft.example = false; saveDraft(); bind(Date.now()); } }
     else if (t.id === 'serveTime' && meal) {
       var p = parseHHMM(t.value); if (!p) return;
-      meal.targetAt = E.nextOccurrence(p.h, p.m, Date.now()); saveMeal(); ui.editServe = false; render();
+      meal.targetAt = todayAt(p.h, p.m, Date.now()); saveMeal(); ui.editServe = false; render();
     }
   });
   document.addEventListener('input', function (e) {
@@ -1330,7 +1420,7 @@ svg{display:block}
     if (t.id === 'foodSearch') { ui.search = t.value; document.getElementById('foodList').innerHTML = foodListHtml(); }
     else if (t.id === 'pickSearch') { ui.pickSearch = t.value; document.getElementById('pickResults').innerHTML = pickerHtml(); }
     else if (t.id === 'addSearch') { ui.addSearch = t.value; document.getElementById('addResults').innerHTML = pickList(ui.addSearch, 'meal'); }
-    else if (t.id === 'finishTime' && parseHHMM(t.value)) { draft.time = t.value; saveDraft(); bind(Date.now()); }
+    else if (t.id === 'finishTime' && parseHHMM(t.value)) { draft.time = t.value; draft.auto = false; saveDraft(); bind(Date.now()); }
     else if (t.id === 'fNudgeText' && ui.sheet) { // typing your own nudge un-highlights the preset chips
       var chips = document.querySelectorAll('[data-act="sheetVerb"]'); for (var i = 0; i < chips.length; i++) chips[i].setAttribute('aria-pressed', t.value.trim() ? 'false' : String(chips[i].getAttribute('data-v') === ui.sheet.nText));
     }
@@ -1346,7 +1436,9 @@ svg{display:block}
     e.preventDefault();
     var el = g.closest('.pl-item'), items = [].slice.call(document.querySelectorAll('.pl-list .pl-item'));
     drag = { el: el, from: +g.getAttribute('data-grip'), to: +g.getAttribute('data-grip'), y0: e.clientY, s0: $main.scrollTop, items: items,
-      mids: items.map(function (n) { var r = n.getBoundingClientRect(); return r.top + r.height / 2 + $main.scrollTop; }), h: el.getBoundingClientRect().height + 12, id: e.pointerId };
+      mids: items.map(function (n) { var r = n.getBoundingClientRect(); return r.top + r.height / 2 + $main.scrollTop; }),
+      tops: items.map(function (n) { return n.getBoundingClientRect().top + $main.scrollTop; }), hs: items.map(function (n) { return n.getBoundingClientRect().height; }),
+      h: el.getBoundingClientRect().height + 12, id: e.pointerId };
     try { g.setPointerCapture(e.pointerId); } catch (x) {}
     el.classList.add('dragging'); haptic();
   });
@@ -1356,8 +1448,10 @@ svg{display:block}
     if (y < mr.top + 70) $main.scrollTop -= 8; else if (y > mr.bottom - 70) $main.scrollTop += 8; // scroll while dragging near an edge
     var dy = y - drag.y0 + ($main.scrollTop - drag.s0);
     drag.el.style.transform = 'translateY(' + dy + 'px) rotate(-1deg)';
-    var centre = drag.mids[drag.from] + dy, to = 0;
-    drag.mids.forEach(function (m, i) { if (i !== drag.from && centre > m) to++; });
+    // Like iOS lists: a card moves aside once the leading edge of the card being dragged passes its middle,
+    // so cards of different heights still swap where you'd expect.
+    var top = drag.tops[drag.from] + dy, bottom = top + drag.hs[drag.from], to = drag.from;
+    drag.mids.forEach(function (m, i) { if (i < drag.from && top < m) to--; if (i > drag.from && bottom > m) to++; });
     if (to !== drag.to) { drag.to = to; haptic(); }
     drag.items.forEach(function (n, i) {
       if (i === drag.from) return;
@@ -1407,7 +1501,8 @@ svg{display:block}
   function syncBanners(now) {
     var s = meal ? sched(now) : null;
     var keep = s ? banners.filter(function (bn) { return bannerLive(bn, s, now); }) : [];
-    var html = keep.slice(-3).map(function (bn) { return bannerHtml(bn, s); }).join('');
+    // In big-screen view the food's own tile lights up instead, so banners don't cover the bar's buttons.
+    var html = bigOn() ? '' : keep.slice(-3).map(function (bn) { return bannerHtml(bn, s); }).join('');
     banners = keep;
     if ($banners._h !== html) { $banners.innerHTML = html; $banners._h = html; }
   }
