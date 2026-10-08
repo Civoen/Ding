@@ -6,45 +6,35 @@
 <style>[hidden]{display:none!important}img{max-width:100%}</style>
 <title>Ding!</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ding!">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-startup-image" href="splash/splash-1179x2556-light.png" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
-<link rel="apple-touch-startup-image" href="splash/splash-1179x2556-dark.png" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
-<link rel="apple-touch-startup-image" href="splash/splash-1290x2796-light.png" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
-<link rel="apple-touch-startup-image" href="splash/splash-1290x2796-dark.png" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="splash/splash-1179x2556-light.png" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1290x2796-light.png" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Work+Sans:wght@500;600;700;800&display=swap">
 <style>
 /* Sticker Book: graph-paper ground, thick ink outlines, hard offset shadows, one colour per food.
-   Layout: native-style app shell. Fixed black header (under the iPhone status bar), one scrolling panel, fixed tab bar. */
+   Layout: native-style app shell. White header under the iPhone's own light status bar, one scrolling panel, fixed tab bar. */
 :root{
   --paper:#F6F5EE; --grid:#E4E2D6; --card:#FFFFFF; --soft:#EFEDE3;
   --ink:#111111; --text:#111111; --muted:#4A4A44;
   --primary:#2F49F0; --on-primary:#FFFFFF;
   --mustard:#FFC21A; --lime:#B9F27C; --tomato:#FF5A36; --late:#D7261E;
-  --tape:#111111; --on-tape:#F6F5EE;
+  --tape:#FFFFFF; --on-tape:#111111;
   --scrim:rgba(17,17,17,.45);
   --f-display:"Dela Gothic One","Arial Black","Helvetica Neue",sans-serif;
   --f-body:"Work Sans",-apple-system,system-ui,sans-serif;
   --sh:4px; --bw:2.5px;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#161614; --grid:#22221F; --card:#23231F; --soft:#2D2D28;
-  --ink:#F2EFE4; --text:#F2EFE4; --muted:#B5B2A6;
-  --primary:#8394FF; --on-primary:#111111; --late:#FF6B5E;
-  --tape:#000000; --on-tape:#F2EFE4; --scrim:rgba(0,0,0,.6); color-scheme:dark;}}
-:root[data-theme="dark"]{
-  --paper:#161614; --grid:#22221F; --card:#23231F; --soft:#2D2D28;
-  --ink:#F2EFE4; --text:#F2EFE4; --muted:#B5B2A6;
-  --primary:#8394FF; --on-primary:#111111; --late:#FF6B5E;
-  --tape:#000000; --on-tape:#F2EFE4; --scrim:rgba(0,0,0,.6); color-scheme:dark;}
+/* One bright look in every setting, including iPhone Dark Mode. */
+:root{color-scheme:light}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--tape);color:var(--text);overscroll-behavior:none}
+html,body{height:100%;background:var(--card);color:var(--text);overscroll-behavior:none}
 body{margin:0;font-family:var(--f-body);font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%;touch-action:manipulation;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select{-webkit-user-select:text;user-select:text;font-size:16px}
@@ -57,12 +47,12 @@ svg{display:block}
 
 /* ---------- shell ---------- */
 .shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
-.top{flex:none;background:var(--tape);color:var(--on-tape);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.logo{font-family:var(--f-display);font-size:21px;background:var(--mustard);color:#111;padding:3px 10px 4px;transform:rotate(-2deg);border-radius:4px;line-height:1.1}
+.top{flex:none;background:var(--tape);color:var(--on-tape);border-bottom:3px solid var(--ink);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logo{font-family:var(--f-display);font-size:21px;background:var(--mustard);color:#111;padding:2px 10px 4px;transform:rotate(-2deg);border:2.5px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 var(--ink);line-height:1.1}
 .top-r{display:flex;align-items:center;gap:10px}
 .clock{font-weight:800;font-size:17px}
-.iconbtn{width:44px;height:44px;border-radius:12px;border:2px solid var(--on-tape);background:transparent;color:var(--on-tape);display:grid;place-items:center}
-.iconbtn:active{background:rgba(255,255,255,.15)}
+.iconbtn{width:44px;height:44px;border-radius:12px;border:2.5px solid var(--ink);background:var(--card);color:var(--ink);box-shadow:3px 3px 0 var(--ink);display:grid;place-items:center}
+.iconbtn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
 .iconbtn svg{width:22px;height:22px}
 .main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
   background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;background-attachment:local}
@@ -560,10 +550,11 @@ svg{display:block}
     ['Corn on the cob', 'Hob', 8, 'Boiling water'],
     ['Baked beans', 'Hob', 4, 'Gentle heat'], ['Baked beans', 'Microwave', 2, '800W', H('Stir')]
   ];
+  // SEED is no longer installed. It is kept only so the one-time clean-up below can recognise old starter foods.
   function seedFoods() { return SEED.map(function (s) { var f = { id: uid(), food: s[0], device: s[1], minutes: s[2], notes: s[3] }; if (s[4]) f.nudge = clone(s[4]); return f; }); }
 
   /* ---------- state ---------- */
-  var foods = load(K.foods); if (!Array.isArray(foods)) { foods = seedFoods(); save(K.foods, foods); }
+  var foods = load(K.foods); if (!Array.isArray(foods)) { foods = []; save(K.foods, foods); }
   var meal = load(K.meal);
   var prefs = load(K.prefs) || { muted: false };
   var saved = load(K.saved); if (!Array.isArray(saved)) saved = [];
@@ -572,15 +563,18 @@ svg{display:block}
     foods.forEach(function (f) { if (f.nudge) return; SEED.forEach(function (s) { if (s[4] && s[0] === f.food && s[1] === f.device && s[2] === f.minutes) f.nudge = clone(s[4]); }); });
     prefs.nudgeSeeded = true; save(K.prefs, prefs); save(K.foods, foods);
   }
-  if (!draft) draft = exampleDraft();
+  if (!prefs.starterRemoved) { // one-time: remove the starter foods (same food, device and minutes); anything you added or re-timed stays
+    foods = foods.filter(function (f) { return !SEED.some(function (s) { return s[0] === f.food && s[1] === f.device && s[2] === f.minutes; }); });
+    if (draft && draft.example) draft = null;
+    prefs.starterRemoved = true; save(K.prefs, prefs); save(K.foods, foods); save(K.draft, draft);
+  }
+  if (!draft) draft = newDraft();
   var ui = { view: meal ? 'cook' : 'plan', big: !!prefs.big, search: '', filter: 'All', pickSearch: '', sheet: null, editServe: false };
   var lastKey = '', prevStatus = {}, undo = null;
 
-  function exampleDraft() {
-    var pick = function (food, dev) { return foods.filter(function (f) { return f.food === food && f.device === dev; })[0]; };
-    var items = [pick('Pizza', 'Oven'), pick('Fries', 'Air Fryer'), pick('Broccoli', 'Microwave')].filter(Boolean).map(draftItemFrom);
+  function newDraft() {
     var t = Math.ceil((Date.now() + 40 * MIN) / (15 * MIN)) * 15 * MIN;
-    return { items: items, time: hhmm(t), mode: 'together', example: true };
+    return { items: [], time: hhmm(t), mode: 'together' };
   }
   function draftItemFrom(f) { return { key: uid(), entryId: f.id, food: f.food, device: f.device, notes: f.notes || '', minutes: f.minutes, nudge: clone(f.nudge) || null, nudgeOff: false, sound: f.sound || null }; }
   function saveDraft() { save(K.draft, draft); }
@@ -873,15 +867,14 @@ svg{display:block}
   }
   function stepH(n, label) { return '<div class="step-h"><span class="n">' + n + '</span><span class="label">' + label + '</span></div>'; }
   function viewPlan(now) {
-    var h = '<h1 class="h1">Tonight’s line-up</h1><p class="lead">Pick your foods and a dinner time. ' + APP + ' works out when to start each one.</p>';
+    var h = '';
     if (saved.length) {
       h += '<div class="saved"><span class="label">Saved meals</span><div class="chips">' + saved.map(function (m) {
         return '<button class="chip meal" data-act="loadMeal" data-id="' + m.id + '">' + icon('save') + esc(m.name) + '</button>';
       }).join('') + '<button class="chip" data-act="manageMeals">Manage</button></div></div>';
     }
-    if (draft.example) h += '<div class="note"><span><b>Example meal.</b> Swap the foods and time, or press Let’s cook to try it out.</span></div>';
     h += stepH(1, 'Foods');
-    if (!draft.items.length) h += '<p class="lead" style="margin:0">Nothing on the list yet. Search below to add something.</p>';
+    if (!draft.items.length && foods.length) h += '<p class="lead" style="margin:0">Nothing on the list yet. Search below to add something.</p>';
     h += '<div class="pl-list">' + draft.items.map(function (d, i) {
       var opts = foods.filter(function (f) { return f.food.toLowerCase() === d.food.toLowerCase(); });
       if (!opts.some(function (f) { return f.id === d.entryId; })) opts = [{ id: d.entryId, device: d.device, minutes: d.minutes }].concat(opts);
@@ -942,6 +935,7 @@ svg{display:block}
   }
   function pickerHtml() {
     var q = ui.pickSearch;
+    if (!foods.length && !q.trim()) return '<div class="note"><span>Your food list is empty. Add the things you cook, with their times, and they’ll show up here.</span><button class="btn sm go" data-act="newFromPlan" style="align-self:flex-start">' + icon('plus') + 'Add a food</button></div>';
     if (!q.trim()) return groups(foods).map(pkRow).join('');
     var gs = groups(foods.filter(function (f) { return matchFood(f, q); }));
     return gs.map(pkRow).join('') + '<button class="btn" data-act="newFromPlan">' + icon('plus') + 'Add “' + esc(q.trim()) + '” to your foods</button>';
@@ -964,6 +958,7 @@ svg{display:block}
     return h;
   }
   function foodListHtml() {
+    if (!foods.length) return '<div class="empty"><p>No foods yet. Add the things you cook and how long each one takes.</p><button class="btn primary" data-act="newFood">' + icon('plus') + 'Add your first food</button></div>';
     var list = foods.filter(function (f) { return (ui.filter === 'All' || f.device === ui.filter) && matchFood(f, ui.search); });
     if (!list.length) return '<div class="empty"><p>Nothing matches that.</p><button class="btn primary" data-act="newFood">' + icon('plus') + 'Add ' + (ui.search.trim() ? '“' + esc(ui.search.trim()) + '”' : 'a food') + '</button></div>';
     var gs = groups(list);
