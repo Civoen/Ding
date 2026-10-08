@@ -47,6 +47,8 @@ svg{display:block}
 
 /* ---------- shell ---------- */
 .shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+/* Home Screen app: size from the full screen height (some iOS versions leave a gap at the bottom with inset:0) */
+@media (display-mode: standalone){.shell{bottom:auto;height:100vh;height:100lvh}}
 .top{flex:none;background:var(--tape);color:var(--on-tape);border-bottom:3px solid var(--ink);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .logo{font-family:var(--f-display);font-size:21px;background:var(--mustard);color:#111;padding:2px 10px 4px;transform:rotate(-2deg);border:2.5px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 var(--ink);line-height:1.1}
 .top-r{display:flex;align-items:center;gap:10px}
@@ -55,9 +57,9 @@ svg{display:block}
 .iconbtn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
 .iconbtn svg{width:22px;height:22px}
 .main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
-  background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;background-attachment:local}
+  background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px}
 .wrap{max-width:560px;margin:0 auto;padding:16px 16px 28px;display:flex;flex-direction:column;gap:16px}
-.tabs{flex:none;background:var(--card);border-top:3px solid var(--ink);padding:8px 14px calc(env(safe-area-inset-bottom,0px) + 8px)}
+.tabs{flex:none;background:var(--card);border-top:3px solid var(--ink);padding:8px 14px max(8px, env(safe-area-inset-bottom,0px))}
 .tabs-in{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:560px;margin:0 auto}
 .tab{border:var(--bw) solid transparent;background:none;border-radius:14px;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;font-size:13px;color:var(--text);position:relative}
 .tab svg{width:24px;height:24px}
@@ -114,8 +116,9 @@ svg{display:block}
 .burst-o{position:absolute;width:132px;height:132px;background:var(--ink);clip-path:var(--star)}
 .burst{position:absolute;inset:4px;clip-path:var(--star);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#111;text-align:center}
 :root{--star:polygon(50% 0%,60.6% 10.4%,75% 6.7%,79% 21%,93.3% 25%,89.6% 39.4%,100% 50%,89.6% 60.6%,93.3% 75%,79% 79%,75% 93.3%,60.6% 89.6%,50% 100%,39.4% 89.6%,25% 93.3%,21% 79%,6.7% 75%,10.4% 60.6%,0% 50%,10.4% 39.4%,6.7% 25%,21% 21%,25% 6.7%,39.4% 10.4%)}
-.burst .cd{font-family:var(--f-display);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
-.burst .cd.long{font-size:21px}
+.burst .cd{font-family:var(--f-display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.burst .cd.mid{font-size:21px}
+.burst .cd.long{font-size:16px}
 .burst .cdk{font-weight:800;font-size:12px;margin-top:2px}
 
 /* ---------- COOK ---------- */
@@ -200,7 +203,8 @@ svg{display:block}
 .timerow{display:flex;align-items:center;gap:12px}
 .ticket{flex:none;background:var(--mustard);color:#111;border:3px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--ink);padding:6px 12px;transform:rotate(-2deg);display:flex;flex-direction:column}
 .ticket small{font-weight:800;font-size:12px}
-.timeinput{font-family:var(--f-display);font-size:40px;line-height:1;border:0;background:transparent;color:#111;padding:0;width:150px;min-height:48px}
+.timeinput{font-family:var(--f-display);font-size:32px;line-height:1.1;border:0;background:transparent;color:#111;padding:0;width:150px;min-height:48px}
+.timeinput::-webkit-calendar-picker-indicator{display:none}
 .timeinput::-webkit-date-and-time-value{text-align:left}
 .tomorrow{font-size:14px;font-weight:800;color:var(--primary)}
 .preview{display:flex;flex-direction:column;padding:6px 14px}
@@ -213,7 +217,7 @@ svg{display:block}
 .pv.final i{background:var(--lime)}
 
 /* ---------- FOODS ---------- */
-.fd-tools{position:sticky;top:-16px;z-index:3;display:flex;flex-direction:column;gap:10px;margin:-16px -16px 0;padding:16px 16px 8px;background:var(--paper)}
+.fd-tools{display:flex;flex-direction:column;gap:10px}
 .fd-count{font-size:13px;font-weight:700;color:var(--muted);margin:0 4px}
 .fd-group{padding:4px 14px}
 .fd-group h3{font-family:var(--f-display);font-weight:400;font-size:20px;margin:12px 0 2px}
@@ -275,13 +279,15 @@ svg{display:block}
 .tl-h{display:flex;align-items:center;gap:8px;min-width:0}
 .tl-h .chipc{width:30px;height:30px;border-radius:9px;border:var(--bw) solid var(--ink);flex:none;display:grid;place-items:center;color:#111}
 .tl-h .chipc svg{width:18px;height:18px}
-.tl-h .nm{font-family:var(--f-display);font-size:22px;line-height:1.05;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-h .nm{font-family:var(--f-display);font-size:21px;line-height:1.15;flex:1;min-width:0;overflow-wrap:anywhere}
 .tl-mid{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
 .tl-cd{font-family:var(--f-display);font-size:clamp(52px,19vw,104px);line-height:.95;letter-spacing:-.01em}
 .tl-cd.long{font-size:clamp(40px,13vw,76px)}
 .n4 .tl-cd,.n5 .tl-cd,.n6 .tl-cd{font-size:clamp(34px,10vw,60px)}
 .n4 .tl-cd.long,.n5 .tl-cd.long,.n6 .tl-cd.long{font-size:clamp(26px,7.5vw,44px)}
-.n4 .tl-h .nm,.n5 .tl-h .nm,.n6 .tl-h .nm{font-size:17px}
+.n4 .tl-h .nm,.n5 .tl-h .nm,.n6 .tl-h .nm{font-size:15px}
+.n4 .tl-act .btn:not(.sm),.n5 .tl-act .btn:not(.sm),.n6 .tl-act .btn:not(.sm){flex:1 1 100%}
+.n4 .tl-act .btn.sm,.n5 .tl-act .btn.sm,.n6 .tl-act .btn.sm{flex:1 1 0;min-width:0}
 .n4 .tl-h .pill,.n5 .tl-h .pill,.n6 .tl-h .pill{display:none}
 .tl-k{font-weight:800;font-size:16px;color:var(--muted)}
 .tl-sub{font-weight:600;font-size:14px;color:var(--muted)}
@@ -308,7 +314,7 @@ svg{display:block}
 .bn-c{flex:none;width:40px;height:40px;border-radius:12px;border:var(--bw) solid var(--ink);background:var(--c);color:#111;display:grid;place-items:center}
 .bn-c svg{width:22px;height:22px}
 .bn-t{flex:1;min-width:0;display:flex;flex-direction:column}
-.bn-t b{font-family:var(--f-display);font-weight:400;font-size:18px;line-height:1.1;overflow-wrap:anywhere}
+.bn-t b{font-family:var(--f-display);font-weight:400;font-size:16px;line-height:1.1;overflow-wrap:anywhere}
 .bn-t span{font-size:13px;font-weight:600;color:var(--muted)}
 .bn .btn.sm{flex:none;min-height:44px}
 .bn-x{flex:none;width:32px;height:44px;border:0;background:none;color:var(--muted);display:grid;place-items:center}
@@ -316,6 +322,20 @@ svg{display:block}
 .tunegrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .tunegrid .chip{justify-content:flex-start;border-radius:12px;min-height:44px}
 .tunegrid .chip svg{width:15px;height:15px}
+
+/* ---------- reorder, add/remove mid-cook, most used ---------- */
+.pl-item{transition:transform .15s ease}
+.pl-item.dragging{transition:none;position:relative;z-index:5;box-shadow:8px 10px 0 var(--ink)}
+.grip{flex:none;width:28px;margin:-10px 0 -10px -12px;padding-left:4px;border:0;background:none;color:var(--muted);display:grid;place-items:center;touch-action:none;cursor:grab}
+.grip svg{width:22px;height:22px;fill:currentColor}
+.grip:active{color:var(--ink)}
+.it-x{flex:none;width:36px;height:36px;margin:-4px -6px -4px 0;border:0;background:none;color:var(--muted);display:grid;place-items:center}
+.it-x svg{width:18px;height:18px}
+.endrow{gap:10px;flex-wrap:wrap}
+.pk-l{display:block;margin:6px 2px 0}
+.pl-ctl select{min-width:158px}
+.bigbar .serve .label{display:none}
+.bigbar .servebar{gap:8px}
 
 </style>
 </head>
@@ -525,7 +545,8 @@ svg{display:block}
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     save: '<path d="M6 3h12v18l-6-4-6 4z"/>',
     note: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
-    play: '<path d="M7 4.5v15l12-7.5z"/>'
+    play: '<path d="M7 4.5v15l12-7.5z"/>',
+    grip: '<circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/>'
   };
   function icon(name, cls) { return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (P[name] || P.other) + '</svg>'; }
   function devIcon(device, cls) { return icon(devKey(device) in P ? devKey(device) : 'other', cls == null ? 'dev' : cls); }
@@ -627,7 +648,7 @@ svg{display:block}
         (saved.length ? '<p>Or start from a saved meal on the Plan tab.</p>' : '') + '</div>';
     }
     var s = sched(now), together = meal.mode !== 'keep';
-    var order = s.rows.slice().sort(function (a, b) { return (a.status === 'done') - (b.status === 'done') || a.startAt - b.startAt; });
+    var order = s.rows.slice().sort(function (a, b) { return (a.status === 'done') - (b.status === 'done'); }); // your order from Plan, finished foods last
     var h = serveBar('<div style="display:flex;gap:8px"><button class="btn sm" data-act="editServe">' + (ui.editServe ? 'Close' : 'Change time') + '</button>' +
       (s.summary.allDone ? '' : '<button class="btn sm go" data-act="big" aria-label="Big screen: see every timer at once">' + icon('big') + 'Big</button>') + '</div>');
     h += '<span class="lead" style="margin-top:-12px" data-b="serve.orig"></span>';
@@ -640,7 +661,7 @@ svg{display:block}
     if (!s.summary.allDone) h += '<section class="stk ringrow" aria-label="Timeline"><div data-b="rings"></div><div class="legend" data-b="legend"></div></section>';
     h += '<div class="seg" role="group" aria-label="If something runs late"><button data-act="mode" data-m="together" aria-pressed="' + together + '">Finish together</button><button data-act="mode" data-m="keep" aria-pressed="' + !together + '">Keep dinner time</button></div>';
     h += '<ol class="items">' + order.map(function (r) { return itemCard(r, itemOf(r.id)); }).join('') + '</ol>';
-    h += '<div class="endrow"><button class="btn ghost" data-act="endMeal">' + (s.summary.allDone ? 'Clear finished meal' : 'End meal') + '</button></div>';
+    h += '<div class="endrow"><button class="btn go" data-act="addOpen">' + icon('plus') + 'Add a food</button><button class="btn ghost" data-act="endMeal">' + (s.summary.allDone ? 'Clear finished meal' : 'End meal') + '</button></div>';
     return h;
   }
   function burst(color) {
@@ -683,7 +704,8 @@ svg{display:block}
   }
   function itemCard(r, it) {
     var st = r.status, h = '<li class="stk item ' + st + '">';
-    h += '<div class="it-h"><span class="chipc" style="background:' + colorOf(it) + '">' + devIcon(it.device, '') + '</span><span class="nm">' + esc(it.food) + '</span><span class="pill ' + (r.nudgeDue ? 'start' : st) + '">' + (r.nudgeDue ? esc(nudgeText(it.nudge)) + '!' : STATUS_LABEL[st]) + '</span></div>';
+    h += '<div class="it-h"><span class="chipc" style="background:' + colorOf(it) + '">' + devIcon(it.device, '') + '</span><span class="nm">' + esc(it.food) + '</span><span class="pill ' + (r.nudgeDue ? 'start' : st) + '">' + (r.nudgeDue ? esc(nudgeText(it.nudge)) + '!' : STATUS_LABEL[st]) + '</span>' +
+      '<button class="it-x" data-act="removeItem" data-id="' + it.id + '" aria-label="Remove ' + esc(it.food) + ' from this meal">' + icon('x') + '</button></div>';
     h += '<div class="it-m">' + esc(it.device) + ' · <span data-b="' + it.id + '.dur"></span>' + (it.notes ? ' · ' + esc(it.notes) : '') + '</div>';
     h += '<div class="it-stats"><div><span class="k">' + (st === 'waiting' || st === 'start' ? 'Start' : 'Started') + '</span><span class="v num" data-b="' + it.id + '.start"></span></div>' +
       '<div class="c2"><span class="k" data-b="' + it.id + '.cdk"></span><span class="v cd num" data-b="' + it.id + '.cd"></span></div>' +
@@ -706,9 +728,9 @@ svg{display:block}
   /* ---------- BIG SCREEN: every timer at once ---------- */
   function viewBig(now) {
     var s = sched(now);
-    var bar = serveBar('<button class="btn sm" data-act="unbig">' + icon('small') + 'Exit</button>');
+    var bar = serveBar('<div style="display:flex;gap:8px"><button class="btn sm go" data-act="addOpen" aria-label="Add a food to this meal">' + icon('plus') + '</button><button class="btn sm" data-act="unbig">' + icon('small') + 'Exit</button></div>');
     if (s.summary.allDone) return bar + allDoneHero();
-    var act = s.rows.filter(function (r) { return r.status !== 'done'; }).sort(function (a, b) { return a.startAt - b.startAt; });
+    var act = s.rows.filter(function (r) { return r.status !== 'done'; }); // tiles keep your order from Plan, so they never jump around
     var done = s.rows.filter(function (r) { return r.status === 'done'; });
     return '<div class="bigbar">' + bar + '</div><div class="biggrid n' + Math.min(act.length, 6) + '">' + act.map(function (r) { return tile(r, itemOf(r.id)); }).join('') + '</div>' +
       (done.length ? '<div class="bigdone">' + icon('check') + '<span>Done: ' + esc(listNames(done.map(function (r) { return itemOf(r.id).food; }))) + '</span></div>' : '');
@@ -756,7 +778,7 @@ svg{display:block}
     var nw = pt(fr(now), 101);
     svg += '<circle cx="' + nw.x + '" cy="' + nw.y + '" r="7" fill="var(--primary)" stroke="var(--ink)" stroke-width="3"/>';
     svg += '<text x="110" y="106" text-anchor="middle" font-family="Work Sans, sans-serif" font-weight="800" font-size="11" fill="var(--text)">READY AT</text>';
-    svg += '<text x="110" y="130" text-anchor="middle" font-family="Dela Gothic One, sans-serif" font-size="' + (clock(end).length > 5 ? 16 : 22) + '" fill="var(--text)">' + clock(end) + '</text></svg>';
+    svg += '<text x="110" y="130" text-anchor="middle" font-family="Dela Gothic One, sans-serif" font-size="' + (clock(end).length > 5 ? 13 : 18) + '" fill="var(--text)">' + clock(end) + '</text></svg>';
     return svg;
   }
   function legendHtml(s) {
@@ -797,7 +819,7 @@ svg{display:block}
           if (r.countdownMs > 0) { cd = countdown(r.countdownMs); k = 'left'; l = 'Ready at ' + clock(r.finishAt); }
           else { cd = overdue(r.countdownMs); k = 'waiting'; nag = r.countdownMs < -60000; l = 'Finished at ' + clock(r.finishAt) + (nag ? '. Don’t let it go cold!' : ''); }
         }
-        b['hero.cd'] = { text: cd, cls: 'cd num' + (cd.length > 5 ? ' long' : '') };
+        b['hero.cd'] = { text: cd, cls: 'cd num' + (cd.length >= 6 ? ' long' : cd.length === 5 ? ' mid' : '') };
         b['hero.cdk'] = k;
         b['hero.cdl'] = { text: l, cls: 'cdl' + (nag ? ' nag' : '') };
       }
@@ -879,7 +901,7 @@ svg{display:block}
       var opts = foods.filter(function (f) { return f.food.toLowerCase() === d.food.toLowerCase(); });
       if (!opts.some(function (f) { return f.id === d.entryId; })) opts = [{ id: d.entryId, device: d.device, minutes: d.minutes }].concat(opts);
       var ng = d.nudge ? '<div class="pl-nudge' + (d.nudgeOff ? ' off' : '') + '">' + icon('bell') + '<span>' + (d.nudgeOff ? 'Nudge off' : esc(nudgeText(d.nudge)) + ' ' + nudgeWhen(d.nudge)) + '</span><button data-act="nudgeToggle" data-i="' + i + '">' + (d.nudgeOff ? 'Turn on' : 'Turn off') + '</button></div>' : '';
-      return '<div class="pl-item"><span class="swatch" style="background:' + COLORS[i % COLORS.length] + '"></span><div class="pl-body">' +
+      return '<div class="pl-item" data-i="' + i + '"><button class="grip" data-grip="' + i + '" aria-label="Move ' + esc(d.food) + '. Drag up or down, or use the arrow keys.">' + icon('grip') + '</button><span class="swatch" style="background:' + COLORS[i % COLORS.length] + '"></span><div class="pl-body">' +
         '<div class="pl-top"><span class="nm">' + esc(d.food) + '</span><button class="x" data-act="rm" data-i="' + i + '" aria-label="Remove ' + esc(d.food) + '">' + icon('x') + '</button></div>' +
         '<div class="pl-ctl"><select data-act="method" data-i="' + i + '" id="method-' + d.key + '" aria-label="How to cook ' + esc(d.food) + '">' + opts.map(function (o) {
           return '<option value="' + o.id + '"' + (o.id === d.entryId ? ' selected' : '') + '>' + esc(o.device) + ' ' + o.minutes + 'm</option>';
@@ -933,15 +955,28 @@ svg{display:block}
     list.forEach(function (f) { var k = f.food.trim().toLowerCase(); if (!g[k]) { g[k] = { name: f.food.trim(), entries: [] }; order.push(k); } g[k].entries.push(f); });
     return order.sort().map(function (k) { g[k].entries.sort(function (a, b) { return DEVICES.indexOf(a.device) - DEVICES.indexOf(b.device) || a.minutes - b.minutes; }); return g[k]; });
   }
-  function pickerHtml() {
-    var q = ui.pickSearch;
-    if (!foods.length && !q.trim()) return '<div class="note"><span>Your food list is empty. Add the things you cook, with their times, and they’ll show up here.</span><button class="btn sm go" data-act="newFromPlan" style="align-self:flex-start">' + icon('plus') + 'Add a food</button></div>';
-    if (!q.trim()) return groups(foods).map(pkRow).join('');
-    var gs = groups(foods.filter(function (f) { return matchFood(f, q); }));
-    return gs.map(pkRow).join('') + '<button class="btn" data-act="newFromPlan">' + icon('plus') + 'Add “' + esc(q.trim()) + '” to your foods</button>';
+  // Most-used first: foods are ranked by how many meals they've been cooked in, then by how recently.
+  function usage(g) { var u = 0, l = 0; g.entries.forEach(function (f) { u += f.uses || 0; l = Math.max(l, f.lastUsed || 0); }); return { u: u, l: l }; }
+  function byUse(gs) {
+    gs.forEach(function (g) { g.entries.sort(function (a, b) { return (b.uses || 0) - (a.uses || 0) || DEVICES.indexOf(a.device) - DEVICES.indexOf(b.device) || a.minutes - b.minutes; }); });
+    return gs.map(function (g, i) { return { g: g, s: usage(g), i: i }; }).sort(function (a, b) { return b.s.u - a.s.u || b.s.l - a.s.l || a.i - b.i; }).map(function (x) { return x.g; });
   }
-  function pkRow(g) {
+  function countUse(entryId, now) { var f = foods.filter(function (x) { return x.id === entryId; })[0]; if (f) { f.uses = (f.uses || 0) + 1; f.lastUsed = now; } }
+  // mode 'plan' toggles foods in tonight's line-up; mode 'meal' adds a food to the meal that's cooking
+  function pickList(q, mode) {
+    var newAct = mode === 'meal' ? 'newFromCook' : 'newFromPlan';
+    if (!foods.length && !q.trim()) return '<div class="note"><span>Your food list is empty. Add the things you cook, with their times, and they’ll show up here.</span><button class="btn sm go" data-act="' + newAct + '" style="align-self:flex-start">' + icon('plus') + 'Add a food</button></div>';
+    var gs = byUse(groups(q.trim() ? foods.filter(function (f) { return matchFood(f, q); }) : foods));
+    var used = gs.filter(function (g) { return usage(g).u > 0; }), rest = gs.filter(function (g) { return !usage(g).u; });
+    var h = '';
+    if (!q.trim() && used.length && rest.length) h = '<span class="label pk-l">Your usual</span>' + used.map(function (g) { return pkRow(g, mode); }).join('') + '<span class="label pk-l">Everything else</span>' + rest.map(function (g) { return pkRow(g, mode); }).join('');
+    else h = gs.map(function (g) { return pkRow(g, mode); }).join('');
+    return h + (q.trim() ? '<button class="btn" data-act="' + newAct + '">' + icon('plus') + 'Add “' + esc(q.trim()) + '” to your foods</button>' : '');
+  }
+  function pickerHtml() { return pickList(ui.pickSearch, 'plan'); }
+  function pkRow(g, mode) {
     return '<div class="pk"><span class="nm">' + esc(g.name) + '</span><span class="opts">' + g.entries.map(function (f) {
+      if (mode === 'meal') return '<button class="chip" data-act="addToMeal" data-id="' + f.id + '">' + icon('plus') + esc(f.device) + ' ' + f.minutes + 'm</button>';
       var added = draft.items.some(function (d) { return d.entryId === f.id; });
       return '<button class="chip' + (added ? ' added' : '') + '" data-act="pick" data-id="' + f.id + '" aria-pressed="' + added + '">' + (added ? icon('check') : devIcon(f.device, '')) + esc(f.device) + ' ' + f.minutes + 'm</button>';
     }).join('') + '</span></div>';
@@ -974,9 +1009,9 @@ svg{display:block}
   /* ---------- sheets ---------- */
   function openFoodSheet(f, fromPlan) {
     var n = f && f.nudge;
-    ui.sheet = { kind: 'food', id: f ? f.id : null, food: f ? f.food : (fromPlan ? ui.pickSearch : ui.search).trim().replace(/^./, function (c) { return c.toUpperCase(); }),
+    ui.sheet = { kind: 'food', id: f ? f.id : null, food: f ? f.food : (fromPlan === 'cook' ? ui.addSearch || '' : fromPlan ? ui.pickSearch : ui.search).trim().replace(/^./, function (c) { return c.toUpperCase(); }),
       device: f ? f.device : (ui.filter !== 'All' ? ui.filter : 'Oven'), minutes: f ? f.minutes : 10, notes: f ? f.notes || '' : '',
-      nMode: n ? n.mode : 'none', nAt: n && n.atMin ? n.atMin : 5, nText: n ? nudgeText(n) : 'Shake', sound: f ? f.sound || null : null, err: '', fromPlan: !!fromPlan };
+      nMode: n ? n.mode : 'none', nAt: n && n.atMin ? n.atMin : 5, nText: n ? nudgeText(n) : 'Shake', sound: f ? f.sound || null : null, err: '', fromPlan: fromPlan === true, fromCook: fromPlan === 'cook' };
     render();
   }
   function sheetHtml() {
@@ -988,6 +1023,11 @@ svg{display:block}
       (saved.some(function (m) { return m.name.toLowerCase() === String(s.name).trim().toLowerCase(); }) ? '<p class="lead" style="margin:0;font-size:14px">A saved meal with this name will be replaced.</p>' : '') +
       (s.err ? '<div class="note warn"><span>' + esc(s.err) + '</span></div>' : '') +
       '<div class="foot"><button class="btn" data-act="sheetCancel">Cancel</button><button class="btn primary" data-act="saveMealConfirm">Save</button></div>';
+    else if (s.kind === 'add') h += '<h2 id="sheetTitle" class="h1" style="font-size:26px">Add to this meal</h2>' +
+      '<label class="sr" for="addSearch">Search your foods</label><input id="addSearch" class="input" type="search" enterkeyhint="search" placeholder="Search your foods" value="' + esc(ui.addSearch || '') + '" autocomplete="off">' +
+      '<div class="picker" id="addResults" style="max-height:none">' + pickList(ui.addSearch || '', 'meal') + '</div>' +
+      (foods.length && !(ui.addSearch || '').trim() ? '<button class="btn ghost" data-act="newFromCook">' + icon('plus') + 'A food that isn’t on your list</button>' : '') +
+      '<div class="foot"><button class="btn" data-act="sheetCancel">Close</button></div>';
     else if (s.kind === 'meals') h += '<h2 id="sheetTitle" class="h1" style="font-size:26px">Saved meals</h2>' +
       (saved.length ? '<div class="stk fd-group">' + saved.map(function (m) {
         return '<div class="fd-entry" style="grid-template-columns:1fr auto auto">' +
@@ -1020,7 +1060,7 @@ svg{display:block}
         return '<button class="chip" data-act="sheetSound" data-s="' + tn.id + '" aria-pressed="' + (s.sound === tn.id) + '">' + icon('play') + tn.name + '</button>';
       }).join('') + '</div></div>' +
       (s.err ? '<div class="note warn"><span>' + esc(s.err) + '</span></div>' : '') +
-      '<div class="foot"><button class="btn" data-act="sheetCancel">Cancel</button><button class="btn primary" data-act="sheetSave">' + (s.fromPlan ? 'Save and add' : 'Save') + '</button></div>' +
+      '<div class="foot"><button class="btn" data-act="sheetCancel">Cancel</button><button class="btn primary" data-act="sheetSave">' + (s.fromPlan || s.fromCook ? 'Save and add' : 'Save') + '</button></div>' +
       (s.id ? '<button class="btn ghost" data-act="sheetDelete">Delete this one</button>' : '');
   }
   function readSheet() {
@@ -1033,7 +1073,7 @@ svg{display:block}
   }
   function openSaveSheet(items, mode) {
     var names = items.map(function (x) { return x.food; });
-    ui.sheet = { kind: 'save', name: listNames(names), items: clone(items), mode: mode, err: '' };
+    ui.sheet = { kind: 'save', name: names.length > 3 ? names.slice(0, 2).join(', ') + ' & ' + (names.length - 2) + ' more' : listNames(names), items: clone(items), mode: mode, err: '' };
     render();
   }
 
@@ -1120,7 +1160,20 @@ svg{display:block}
     if (meal) requestWake();
   }
   // Actions that change nothing worth undoing keep any pending Undo; everything else replaces or clears it.
-  var KEEPS_UNDO = { nav: 1, mute: 1, hideInstall: 1, filter: 1, editServe: 1, big: 1, unbig: 1, manageMeals: 1, newFood: 1, editFood: 1, newFromPlan: 1, saveMeal: 1, saveMealFromCook: 1, sheetCancel: 1, sheetScrim: 1, sheetDev: 1, sheetMin: 1, sheetNudge: 1, sheetVerb: 1, sheetSound: 1, dismiss: 1, undo: 1 };
+  var KEEPS_UNDO = { nav: 1, mute: 1, hideInstall: 1, filter: 1, editServe: 1, big: 1, unbig: 1, manageMeals: 1, newFood: 1, editFood: 1, newFromPlan: 1, saveMeal: 1, saveMealFromCook: 1, sheetCancel: 1, sheetScrim: 1, sheetDev: 1, sheetMin: 1, sheetNudge: 1, sheetVerb: 1, sheetSound: 1, dismiss: 1, addOpen: 1, newFromCook: 1, undo: 1 };
+
+  // Add a food to the meal that's already cooking. It slots into the same schedule: in "Finish together"
+  // a food too long to make the current time moves dinner back; in "Keep dinner time" it shows as late.
+  function addFoodToMeal(f, now) {
+    var used = meal.items.map(function (x) { return x.color; });
+    var color = 0; while (used.indexOf(color) >= 0 && color < COLORS.length) color++;
+    var it = { id: uid(), food: f.food, device: f.device, notes: f.notes || '', baseMs: f.minutes * MIN, adjustMs: 0, startedAt: null, doneAt: null,
+      color: color % COLORS.length, nudge: clone(f.nudge) || null, nudgedAt: null, sound: f.sound || null };
+    meal.items.push(it); prevStatus[it.id] = 'waiting'; // so a food that must start right away still alerts
+    countUse(f.id, now); saveFoods(); saveMeal(); ui.view = 'cook';
+    var r = rowOf(E.computeSchedule(meal, now), it.id);
+    return f.food + ' added · ' + (r.countdownMs > 1000 ? 'start ' + clock(r.startAt) : 'start it now');
+  }
 
   /* ---------- actions ---------- */
   function act(a, el) {
@@ -1183,6 +1236,15 @@ svg{display:block}
         draft.mode = m.mode || 'together'; draft.example = false; saveDraft(); ui.sheet = null; ui.view = 'plan'; $main.scrollTop = 0; undoMsg = 'Loaded “' + m.name + '”'; break;
       }
       case 'manageMeals': ui.sheet = { kind: 'meals' }; break;
+      case 'addOpen': ui.addSearch = ''; ui.sheet = { kind: 'add' }; break;
+      case 'newFromCook': openFoodSheet(null, 'cook'); return;
+      case 'addToMeal': { var af = foods.filter(function (x) { return x.id === id; })[0]; if (!af || !meal) return; ui.sheet = null; undoMsg = addFoodToMeal(af, now); break; }
+      case 'removeItem': {
+        it = itemOf(id); if (!it) return;
+        meal.items = meal.items.filter(function (x) { return x.id !== id; }); delete prevStatus[id];
+        if (!meal.items.length) { meal = null; ui.view = 'plan'; releaseWake(); }
+        saveMeal(); undoMsg = it.food + ' removed from the meal'; break;
+      }
       case 'deleteMeal': { var dm = saved.filter(function (x) { return x.id === id; })[0]; saved = saved.filter(function (x) { return x.id !== id; }); saveSaved(); undoMsg = 'Deleted “' + (dm ? dm.name : 'meal') + '”'; break; }
       case 'startMeal': {
         var target = draftTarget(now); if (target == null || !draft.items.length) return;
@@ -1190,6 +1252,7 @@ svg{display:block}
         meal = { id: uid(), createdAt: now, targetAt: target, mode: draft.mode, items: draft.items.map(function (d, i) {
           return { id: uid(), food: d.food, device: d.device, notes: d.notes, baseMs: d.minutes * MIN, adjustMs: 0, startedAt: null, doneAt: null, color: i % COLORS.length, nudge: d.nudgeOff ? null : clone(d.nudge) || null, nudgedAt: null, sound: d.sound || null };
         }) };
+        draft.items.forEach(function (d) { countUse(d.entryId, now); }); saveFoods();
         draft.example = false; saveDraft(); saveMeal(); prevStatus = {}; ui.view = 'cook'; ui.editServe = false; $main.scrollTop = 0; unlockAudio(); requestWake();
         if (replaced) undoMsg = 'Previous meal replaced';
         break;
@@ -1227,6 +1290,7 @@ svg{display:block}
         // keep tonight's line-up in step with the edit
         draft.items.forEach(function (d) { if (d.entryId === rec.id) { d.food = rec.food; d.device = rec.device; d.minutes = rec.minutes; d.notes = rec.notes; d.nudge = clone(rec.nudge) || null; d.sound = rec.sound || null; } }); saveDraft();
         if (s.fromPlan) { draft.items.push(draftItemFrom(rec)); draft.example = false; ui.pickSearch = ''; saveDraft(); }
+        if (s.fromCook && meal) { ui.sheet = null; undoMsg = addFoodToMeal(rec, now); ui.addSearch = ''; break; }
         ui.sheet = null; toast(s.id ? 'Saved' : (s.fromPlan ? 'Added to your foods and tonight’s line-up' : 'Added')); break;
       }
       default: return;
@@ -1265,11 +1329,53 @@ svg{display:block}
     var t = e.target;
     if (t.id === 'foodSearch') { ui.search = t.value; document.getElementById('foodList').innerHTML = foodListHtml(); }
     else if (t.id === 'pickSearch') { ui.pickSearch = t.value; document.getElementById('pickResults').innerHTML = pickerHtml(); }
+    else if (t.id === 'addSearch') { ui.addSearch = t.value; document.getElementById('addResults').innerHTML = pickList(ui.addSearch, 'meal'); }
     else if (t.id === 'finishTime' && parseHHMM(t.value)) { draft.time = t.value; saveDraft(); bind(Date.now()); }
     else if (t.id === 'fNudgeText' && ui.sheet) { // typing your own nudge un-highlights the preset chips
       var chips = document.querySelectorAll('[data-act="sheetVerb"]'); for (var i = 0; i < chips.length; i++) chips[i].setAttribute('aria-pressed', t.value.trim() ? 'false' : String(chips[i].getAttribute('data-v') === ui.sheet.nText));
     }
   });
+  /* ---------- drag to reorder tonight's line-up ---------- */
+  function moveDraft(from, to) {
+    if (from === to || to < 0 || to >= draft.items.length) return;
+    var x = draft.items.splice(from, 1)[0]; draft.items.splice(to, 0, x); draft.example = false; saveDraft();
+  }
+  var drag = null;
+  document.addEventListener('pointerdown', function (e) {
+    var g = e.target.closest && e.target.closest('[data-grip]'); if (!g || ui.view !== 'plan') return;
+    e.preventDefault();
+    var el = g.closest('.pl-item'), items = [].slice.call(document.querySelectorAll('.pl-list .pl-item'));
+    drag = { el: el, from: +g.getAttribute('data-grip'), to: +g.getAttribute('data-grip'), y0: e.clientY, s0: $main.scrollTop, items: items,
+      mids: items.map(function (n) { var r = n.getBoundingClientRect(); return r.top + r.height / 2 + $main.scrollTop; }), h: el.getBoundingClientRect().height + 12, id: e.pointerId };
+    try { g.setPointerCapture(e.pointerId); } catch (x) {}
+    el.classList.add('dragging'); haptic();
+  });
+  function dragMove(y) {
+    if (!drag) return;
+    var mr = $main.getBoundingClientRect();
+    if (y < mr.top + 70) $main.scrollTop -= 8; else if (y > mr.bottom - 70) $main.scrollTop += 8; // scroll while dragging near an edge
+    var dy = y - drag.y0 + ($main.scrollTop - drag.s0);
+    drag.el.style.transform = 'translateY(' + dy + 'px) rotate(-1deg)';
+    var centre = drag.mids[drag.from] + dy, to = 0;
+    drag.mids.forEach(function (m, i) { if (i !== drag.from && centre > m) to++; });
+    if (to !== drag.to) { drag.to = to; haptic(); }
+    drag.items.forEach(function (n, i) {
+      if (i === drag.from) return;
+      var shift = (drag.from < drag.to && i > drag.from && i <= drag.to) ? -drag.h : (drag.from > drag.to && i < drag.from && i >= drag.to) ? drag.h : 0;
+      n.style.transform = shift ? 'translateY(' + shift + 'px)' : '';
+    });
+  }
+  window.addEventListener('pointermove', function (e) { if (drag && e.pointerId === drag.id) { e.preventDefault(); drag.lastY = e.clientY; dragMove(e.clientY); } }, { passive: false });
+  setInterval(function () { if (drag && drag.lastY != null) dragMove(drag.lastY); }, 30); // keeps edge-scrolling going while held still
+  function endDrag() { if (!drag) return; var d = drag; drag = null; moveDraft(d.from, d.to); render(); }
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+  document.addEventListener('keydown', function (e) {
+    var g = e.target.getAttribute && e.target.getAttribute('data-grip'); if (g == null || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    e.preventDefault(); var i = +g, to = i + (e.key === 'ArrowUp' ? -1 : 1); if (to < 0 || to >= draft.items.length) return;
+    moveDraft(i, to); render(); var n = document.querySelector('[data-grip="' + to + '"]'); if (n) n.focus();
+  });
+
   function wakeUp() { if (document.visibilityState === 'visible') { requestWake(); tick(); } }
   document.addEventListener('visibilitychange', wakeUp);
   window.addEventListener('pageshow', wakeUp);
@@ -1344,7 +1450,26 @@ svg{display:block}
     if (!ui.sheet && !focusInView && structureKey(now) !== lastKey) render(); else bind(now);
   }
 
+  // iPhone fixes: size the app from the full screen height in the Home Screen app, and undo the page shift
+  // iOS sometimes leaves behind after the keyboard closes (which lifts the tab bar and hides content).
+  function fitShell() {
+    try {
+      if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0);
+      if (!standalone) return;
+      var pr = document.createElement('div'); pr.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none';
+      document.body.appendChild(pr); var lvh = pr.offsetHeight; document.body.removeChild(pr);
+      var h = Math.min(Math.max(screen.height, screen.width), Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0, lvh || 0));
+      if (h > 0) { $shell.style.bottom = 'auto'; $shell.style.height = h + 'px'; }
+    } catch (e) {}
+  }
+  document.addEventListener('focusout', function () { setTimeout(fitShell, 60); setTimeout(fitShell, 400); });
+  window.addEventListener('resize', fitShell);
+  window.addEventListener('orientationchange', function () { setTimeout(fitShell, 300); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { setTimeout(fitShell, 60); });
+  window.addEventListener('pageshow', fitShell);
+
   render();
+  fitShell();
   setInterval(tick, 250);
   if (meal) requestWake();
 
