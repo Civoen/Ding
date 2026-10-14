@@ -363,6 +363,18 @@ svg{display:block}
 .mchip{max-width:100%}
 .btn{max-width:100%;overflow-wrap:anywhere;text-align:center}
 
+/* ---------- feel ---------- */
+.btn{max-width:100%;overflow-wrap:anywhere;text-align:center}
+.searchrow{display:flex;gap:10px}
+.searchrow .btn{flex:none}
+/* Let's cook stays at the bottom of Plan while you scroll */
+.cookbar{position:sticky;bottom:0;z-index:2;margin:0 -16px -28px;padding:14px 16px 16px;background:linear-gradient(rgba(246,245,238,0),var(--paper) 34%)}
+.cookbar .btn.big{flex-direction:column;gap:0;line-height:1.1}
+.cookbar small{font-family:var(--f-body);font-weight:700;font-size:13px;opacity:.9}
+/* quick feedback when a card changes state */
+.item,.tile,.hero,.pl-item,.pk,.chip,.pill{transition:background-color .2s ease,border-color .2s ease,opacity .2s ease}
+@media (prefers-reduced-motion: reduce){.item,.tile,.hero,.pl-item,.pk,.chip,.pill{transition:none}}
+
 </style>
 </head>
 <body>
@@ -655,19 +667,50 @@ svg{display:block}
   $app.innerHTML = '<div class="shell" id="shell"><header class="top" id="top"></header><main class="main" id="main"><div class="wrap" id="view"></div></main><nav class="tabs" id="tabs" aria-label="Sections"></nav></div><div id="overlay"></div><div id="toastbox" aria-live="polite"></div>';
   var $shell = document.getElementById('shell'), $top = document.getElementById('top'), $main = document.getElementById('main'), $view = document.getElementById('view'), $tabs = document.getElementById('tabs'), $overlay = document.getElementById('overlay'), $toast = document.getElementById('toastbox');
 
+  /* In-place updates: each render builds fresh HTML, but rather than replacing the screen it's merged into what is
+     already there. Unchanged parts stay put, so nothing blinks, animations keep running and scroll positions hold.
+     Parts marked data-b are live text filled in by bind(), so their insides are left alone here. */
+  function nodeKey(n) { return n.nodeType === 1 ? (n.id || n.getAttribute('data-b') || n.getAttribute('data-key') || '') : ''; }
+  function sameKind(a, b) { return a.nodeType === b.nodeType && (a.nodeType !== 1 || (a.tagName === b.tagName && nodeKey(a) === nodeKey(b))); }
+  function morphAttrs(a, b) {
+    var owned = a.hasAttribute('data-b'), i, nm;
+    for (i = a.attributes.length - 1; i >= 0; i--) { nm = a.attributes[i].name; if (owned && (nm === 'class' || nm === 'hidden')) continue; if (!b.hasAttribute(nm)) a.removeAttribute(nm); }
+    for (i = 0; i < b.attributes.length; i++) { nm = b.attributes[i]; if (owned && (nm.name === 'class' || nm.name === 'hidden')) continue; if (a.getAttribute(nm.name) !== nm.value) a.setAttribute(nm.name, nm.value); }
+  }
+  function morphNode(a, b) {
+    if (a.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+    morphAttrs(a, b);
+    var tag = a.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') { var v = b.getAttribute('value') || ''; if (a !== document.activeElement && a.value !== v) a.value = v; return; }
+    if (a.hasAttribute('data-b')) return;
+    var selv = tag === 'SELECT' ? (b.querySelector('option[selected]') || {}).value : null;
+    morphChildren(a, b);
+    if (selv != null && a.value !== selv) a.value = selv;
+  }
+  function morphChildren(from, to) {
+    var a = from.firstChild, b = to.firstChild, nb, na;
+    while (b) {
+      nb = b.nextSibling;
+      if (!a) from.appendChild(b);
+      else if (sameKind(a, b)) { morphNode(a, b); a = a.nextSibling; }
+      else { na = a.nextSibling; from.replaceChild(b, a); a = na; }
+      b = nb;
+    }
+    while (a) { na = a.nextSibling; from.removeChild(a); a = na; }
+  }
+  function patch(el, html) { var t = document.createElement('template'); t.innerHTML = html; morphChildren(el, t.content); }
+
   function render() {
     var now = Date.now();
     $shell.classList.toggle('bigmode', bigOn());
-    $top.innerHTML = '<span class="logo">' + APP + '</span><div class="top-r"><span class="clock num" data-b="clock"></span>' +
-      '<button class="iconbtn" data-act="mute" aria-label="' + (prefs.muted ? 'Turn alert sounds on' : 'Mute alert sounds') + '">' + icon(prefs.muted ? 'mute' : 'sound') + '</button></div>';
-    $view.innerHTML = bigOn() ? viewBig(now) : installHint() + (ui.view === 'cook' ? viewCook(now) : ui.view === 'plan' ? viewPlan(now) : viewFoods());
-    $tabs.innerHTML = '<div class="tabs-in">' + tab('cook', 'Cook', live(now)) + tab('plan', 'Plan') + tab('foods', 'Foods') + '</div>';
-    // Re-drawing an open sheet keeps its scroll position and doesn't replay the slide-up, so it never jumps.
-    var oldSheet = $overlay.querySelector('.sheet'), same = !!(oldSheet && ui.sheet && $overlay.getAttribute('data-kind') === ui.sheet.kind), keep = oldSheet ? oldSheet.scrollTop : 0;
-    var sh = ui.sheet ? sheetHtml() : '';
-    if (same) sh = sh.replace('class="scrim"', 'class="scrim still"');
-    $overlay.innerHTML = sh; $overlay.setAttribute('data-kind', ui.sheet ? ui.sheet.kind : '');
-    if (same) { var ns = $overlay.querySelector('.sheet'); if (ns) ns.scrollTop = keep; }
+    patch($top, '<span class="logo">' + APP + '</span><div class="top-r"><span class="clock num" data-b="clock"></span>' +
+      '<button class="iconbtn" data-act="mute" aria-label="' + (prefs.muted ? 'Turn alert sounds on' : 'Mute alert sounds') + '">' + icon(prefs.muted ? 'mute' : 'sound') + '</button></div>');
+    patch($view, bigOn() ? viewBig(now) : installHint() + (ui.view === 'cook' ? viewCook(now) : ui.view === 'plan' ? viewPlan(now) : viewFoods()));
+    patch($tabs, '<div class="tabs-in">' + tab('cook', 'Cook', live(now)) + tab('plan', 'Plan') + tab('foods', 'Foods') + '</div>');
+    // A sheet that stays open is updated in place (no jump, no slide-up replay); a new sheet slides up fresh.
+    var kind = ui.sheet ? ui.sheet.kind : '';
+    if (kind && kind === $overlay.getAttribute('data-kind') && $overlay.firstChild) patch($overlay, sheetHtml());
+    else { $overlay.innerHTML = kind ? sheetHtml() : ''; $overlay.setAttribute('data-kind', kind); }
     lastKey = structureKey(now);
     bind(now);
   }
@@ -680,7 +723,7 @@ svg{display:block}
   }
 
   /* ---------- COOK ---------- */
-  var STATUS_LABEL = { waiting: 'Waiting', start: 'Start now!', cooking: 'Cooking', ready: 'Grab it!', done: 'Done' };
+  var STATUS_LABEL = { waiting: 'Waiting', start: 'Paused', cooking: 'Cooking', ready: 'Grab it!', done: 'Done' };
   function serveBar(extraBtn) {
     return '<div class="servebar"><div class="serve"><span class="label">Dinner</span><span class="t num" data-b="serve.t"></span><span data-b="serve.pill"></span></div>' + extraBtn + '</div>';
   }
@@ -733,10 +776,10 @@ svg{display:block}
       btn = '<button class="btn ' + (ev.urgent ? 'primary' : '') + ' big" data-act="nudgeDone" data-id="' + it.id + '">' + (ev.urgent ? 'Done it!' : 'Done it early') + '</button>';
     } else if (ev.type === 'start' && !ev.urgent) {
       cls = 'waiting'; badge = 'NEXT UP'; what = food + ' next';
-      btn = '<button class="btn big" data-act="start" data-id="' + it.id + '">Start it early</button>';
+      btn = '<button class="btn big" data-act="start" data-id="' + it.id + '">Put it in early</button>';
     } else if (ev.type === 'start') {
-      cls = 'start'; badge = 'START NOW!'; what = food + ' in!';
-      btn = '<button class="btn primary big" data-act="start" data-id="' + it.id + '">Done it! It’s in</button>';
+      cls = 'start'; badge = 'PAUSED'; what = 'Put the ' + food + ' in';
+      btn = '<button class="btn primary big" data-act="start" data-id="' + it.id + '">It’s in!</button>';
     } else if (!ev.urgent) {
       cls = 'cooking'; badge = 'COOKING'; what = food;
       btn = '<button class="btn big side" data-act="adj" data-id="' + it.id + '" data-d="1" aria-label="Add one minute to ' + food + '">+1</button><button class="btn big yes" data-act="done" data-id="' + it.id + '">It’s done</button>';
@@ -764,8 +807,9 @@ svg{display:block}
     }
     h += '<div class="it-act">';
     if (r.nudgeDue) h += '<button class="btn go" data-act="nudgeDone" data-id="' + it.id + '">Done: ' + esc(nudgeText(it.nudge).toLowerCase()) + '</button>';
-    if (st === 'waiting' || st === 'start') h += '<button class="btn ' + (st === 'start' ? 'go' : '') + '" data-act="start" data-id="' + it.id + '">Mark started</button>';
-    if (st === 'cooking' || st === 'ready') h += (r.nudgeDue ? '' : '<button class="btn ghost" data-act="unstart" data-id="' + it.id + '">Undo start</button>') + '<button class="btn yes" data-act="done" data-id="' + it.id + '">Mark done</button>';
+    if (st === 'waiting') h += '<button class="btn" data-act="start" data-id="' + it.id + '">Put in early</button>';
+    if (st === 'start') h += '<button class="btn go" data-act="start" data-id="' + it.id + '">It’s in!</button>';
+    if (st === 'cooking' || st === 'ready') h += (r.nudgeDue || st === 'ready' ? '' : '<button class="btn ghost" data-act="hold" data-id="' + it.id + '">Not in yet</button>') + '<button class="btn yes" data-act="done" data-id="' + it.id + '">Mark done</button>';
     if (st === 'done') h += '<button class="btn ghost" data-act="undone" data-id="' + it.id + '">Not done yet</button>';
     h += '</div></li>';
     return h;
@@ -809,7 +853,7 @@ svg{display:block}
     else if (st === 'start') b = '<button class="btn big primary" data-act="start" data-id="' + id + '">It’s in!</button>';
     else if (st === 'ready') b = '<button class="btn big primary" data-act="done" data-id="' + id + '">Got it out</button>';
     else if (st === 'cooking') b = '<button class="btn sm" data-act="adj" data-id="' + id + '" data-d="1" aria-label="Add one minute">+1</button><button class="btn sm" data-act="adj" data-id="' + id + '" data-d="5" aria-label="Add five minutes">+5</button><button class="btn yes" data-act="done" data-id="' + id + '">Done</button>';
-    else b = '<button class="btn sm" data-act="adj" data-id="' + id + '" data-d="-1" aria-label="Take off one minute">−1</button><button class="btn sm" data-act="adj" data-id="' + id + '" data-d="1" aria-label="Add one minute">+1</button><button class="btn" data-act="start" data-id="' + id + '">Start early</button>';
+    else b = '<button class="btn sm" data-act="adj" data-id="' + id + '" data-d="-1" aria-label="Take off one minute">−1</button><button class="btn sm" data-act="adj" data-id="' + id + '" data-d="1" aria-label="Add one minute">+1</button><button class="btn" data-act="start" data-id="' + id + '">In early</button>';
     return '<section class="tile ' + st + (hot ? ' hot' : '') + '" style="--c:' + colorOf(it) + '" aria-label="' + esc(it.food) + '">' +
       '<div class="tl-h"><span class="chipc" style="background:' + colorOf(it) + '">' + devIcon(it.device, '') + '</span><span class="nm">' + esc(it.food) + '</span><span class="pill ' + (r.nudgeDue ? 'start' : st) + '">' + (r.nudgeDue ? esc(nudgeText(it.nudge)) + '!' : STATUS_LABEL[st]) + '</span></div>' +
       '<div class="tl-mid"><span class="tl-cd num" data-b="' + id + '.big"></span><span class="tl-k" data-b="' + id + '.bigk"></span></div>' +
@@ -854,7 +898,7 @@ svg{display:block}
       var it = itemOf(r.id), t;
       if (r.nudgeDue) t = nudgeText(it.nudge).toLowerCase() + ' now!';
       else if (r.status === 'waiting') t = 'starts ' + clock(r.startAt);
-      else if (r.status === 'start') t = 'start now!';
+      else if (r.status === 'start') t = 'paused';
       else if (r.status === 'cooking') t = countdown(r.countdownMs) + ' left';
       else t = 'grab it!';
       return '<div style="background:' + colorOf(it) + '"><b>' + esc(it.food) + '</b><span class="num">' + t + '</span></div>';
@@ -880,8 +924,8 @@ svg{display:block}
           else if (left > -1000) { cd = 'NOW!'; k = 'go go go'; l = 'Then back in · ready ' + clock(r.finishAt); }
           else { cd = overdue(left); k = 'waiting'; l = 'Then back in · ready ' + clock(r.finishAt); }
         } else if (ev.type === 'start') {
-          if (r.countdownMs > 0) { cd = countdown(r.countdownMs); k = 'to go'; l = 'Starts ' + clock(r.startAt) + ' · ready ' + clock(r.finishAt); }
-          else if (r.countdownMs > -1000) { cd = 'NOW!'; k = 'go go go'; l = 'Ready at ' + clock(r.finishAt); }
+          if (r.countdownMs > 0) { cd = countdown(r.countdownMs); k = 'to go'; l = 'Starts itself at ' + clock(r.startAt) + ' · ready ' + clock(r.finishAt); }
+          else if (r.countdownMs > -1000) { cd = 'PAUSED'; k = 'tap It’s in!'; l = 'The timer starts when you tap It’s in! · ready ' + clock(r.finishAt); }
           else { cd = overdue(r.countdownMs); k = 'late'; nag = true; l = 'Oi! This should be in by now. Ready ' + clock(r.finishAt) + (r.lateMs > 0 ? ' (' + delta(r.lateMs) + ' late)' : ''); }
         } else {
           if (r.countdownMs > 0) { cd = countdown(r.countdownMs); k = 'left'; l = 'Ready at ' + clock(r.finishAt); }
@@ -892,7 +936,7 @@ svg{display:block}
         b['hero.cdl'] = { text: l, cls: 'cdl' + (nag ? ' nag' : '') };
       }
       b.then = { html: s.events.slice(1, 4).map(function (e) {
-        var it = itemOf(e.id), what = e.type === 'start' ? 'Start ' + it.food : e.type === 'nudge' ? nudgePhrase(it) : 'Take out ' + it.food;
+        var it = itemOf(e.id), what = e.type === 'start' ? it.food + ' goes in' : e.type === 'nudge' ? nudgePhrase(it) : 'Take out ' + it.food;
         return '<div><i style="background:' + colorOf(it) + '"></i><b class="num">' + (e.urgent ? 'Now' : clock(e.at)) + '</b><span>' + esc(what) + '</span></div>';
       }).join('') + (s.events.length && !sm.allDone ? '<div><i style="background:var(--lime)"></i><b class="num">' + clock(sm.latestFinishAt) + '</b><span>Dinner’s up</span></div>' : '') };
       var mg = mergeInfo(s);
@@ -911,8 +955,8 @@ svg{display:block}
         b[id + '.start'] = clock(r.startAt);
         b[id + '.fin'] = clock(r.finishAt);
         var k, v, bk, bsub;
-        if (r.status === 'waiting') { k = 'Starts in'; v = countdown(r.countdownMs); bk = 'to start'; bsub = 'Start ' + clock(r.startAt) + ' · ready ' + clock(r.finishAt); }
-        else if (r.status === 'start') { if (r.countdownMs > -1000) { k = 'Start'; v = 'Now!'; bk = 'start it now!'; } else { k = 'Late by'; v = overdue(r.countdownMs); bk = 'late, start it!'; } bsub = 'Ready ' + clock(r.finishAt); }
+        if (r.status === 'waiting') { k = 'Starts in'; v = countdown(r.countdownMs); bk = 'till it goes in'; bsub = 'In at ' + clock(r.startAt) + ' · ready ' + clock(r.finishAt); }
+        else if (r.status === 'start') { if (r.countdownMs > -1000) { k = 'Paused'; v = 'Paused'; bk = 'tap It’s in! when it is'; } else { k = 'Late by'; v = overdue(r.countdownMs); bk = 'late, put it in!'; } bsub = 'Ready ' + clock(r.finishAt); }
         else if (r.status === 'cooking') { k = 'Left'; v = countdown(r.countdownMs); bk = r.nudgeDue ? nudgePhrase(it).toLowerCase() + '!' : 'left'; bsub = 'Ready ' + clock(r.finishAt); }
         else if (r.status === 'ready') { k = 'Waiting'; v = overdue(r.countdownMs); bk = 'ready, grab it!'; bsub = 'Finished ' + clock(r.finishAt); }
         else { k = 'Took'; v = mins(r.finishAt - r.startAt); bk = ''; bsub = ''; }
@@ -935,7 +979,11 @@ svg{display:block}
         b[id + '.note'] = note;
       });
     }
-    if (ui.view === 'plan') b['plan.preview'] = { html: previewHtml(now) };
+    if (ui.view === 'plan') {
+      b['plan.preview'] = { html: previewHtml(now) };
+      var tg = draftTarget(now), lg = draft.items.length ? Math.max.apply(null, draft.items.map(function (d) { return d.minutes * MIN; })) : 0;
+      b['plan.ready'] = { text: draft.items.length && tg != null ? 'Ready ' + clock(draft.auto ? now + lg : Math.max(tg, now + lg)) : '', hidden: !draft.items.length };
+    }
     return b;
   }
   function bind(now) {
@@ -987,7 +1035,8 @@ svg{display:block}
         ng + (d.notes || d.sound ? '<span class="pl-note">' + esc([d.notes, d.sound && tuneById(d.sound) ? '♪ ' + tuneById(d.sound).name : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</div></div>';
     }).join('') + '</div>';
     if (draft.items.length) h += '<button class="btn sm" data-act="saveMeal" style="align-self:flex-start">' + icon('save') + 'Save this line-up</button>';
-    h += '<div><label class="sr" for="pickSearch">Add a food</label><input id="pickSearch" class="input" type="search" enterkeyhint="search" placeholder="Add a food… (try “pizza”)" value="' + esc(ui.pickSearch) + '" autocomplete="off"></div>';
+    h += '<div class="searchrow"><label class="sr" for="pickSearch">Add a food</label><input id="pickSearch" class="input" type="search" enterkeyhint="search" placeholder="Find a food…" value="' + esc(ui.pickSearch) + '" autocomplete="off">' +
+      '<button class="btn go" data-act="newFromPlan" aria-label="Quick timer or new food">' + icon('plus') + 'Quick</button></div>';
     h += '<div class="picker" id="pickResults">' + pickerHtml() + '</div>';
 
     h += stepH(2, 'Dinner time');
@@ -1001,7 +1050,8 @@ svg{display:block}
 
     h += stepH(4, 'Your schedule');
     h += '<div data-b="plan.preview"></div>';
-    h += '<button class="btn primary big" data-act="startMeal"' + (draft.items.length && parseHHMM(draft.time) ? '' : ' disabled') + '>' + (live(now) ? 'Let’s cook! (replaces current meal)' : 'Let’s cook!') + '</button>';
+    h += '<div class="cookbar"><button class="btn primary big" data-act="startMeal"' + (draft.items.length && parseHHMM(draft.time) ? '' : ' disabled') + '>' +
+      '<span>' + (live(now) ? 'Let’s cook! (replaces current meal)' : 'Let’s cook!') + '</span><small class="num" data-b="plan.ready"></small></button></div>';
     return h;
   }
   function timeNote(now) {
@@ -1054,7 +1104,7 @@ svg{display:block}
     var h = '';
     if (!q.trim() && used.length && rest.length) h = '<span class="label pk-l">Your usual</span>' + used.map(function (g) { return pkRow(g, mode); }).join('') + '<span class="label pk-l">Everything else</span>' + rest.map(function (g) { return pkRow(g, mode); }).join('');
     else h = gs.map(function (g) { return pkRow(g, mode); }).join('');
-    return h + (q.trim() ? '<button class="btn" data-act="' + newAct + '">' + icon('plus') + 'Add “' + esc(q.trim()) + '” to your foods</button>' : '');
+    return h + (q.trim() ? '<button class="btn" data-act="' + newAct + '">' + icon('plus') + 'Add “' + esc(q.trim()) + '”</button>' : '');
   }
   function pickerHtml() { return pickList(ui.pickSearch, 'plan'); }
   function pkRow(g, mode) {
@@ -1094,7 +1144,8 @@ svg{display:block}
     var n = f && f.nudge;
     ui.sheet = { kind: 'food', id: f ? f.id : null, food: f ? f.food : (fromPlan === 'cook' ? ui.addSearch || '' : fromPlan ? ui.pickSearch : ui.search).trim().replace(/^./, function (c) { return c.toUpperCase(); }),
       device: f ? f.device : (ui.filter !== 'All' ? ui.filter : 'Oven'), minutes: f ? f.minutes : 10, notes: f ? f.notes || '' : '',
-      nMode: n ? n.mode : 'none', nAt: n && n.atMin ? n.atMin : 5, nText: n ? nudgeText(n) : 'Shake', sound: f ? f.sound || null : null, err: '', fromPlan: fromPlan === true, fromCook: fromPlan === 'cook' };
+      nMode: n ? n.mode : 'none', nAt: n && n.atMin ? n.atMin : 5, nText: n ? nudgeText(n) : 'Shake', sound: f ? f.sound || null : null, err: '', fromPlan: fromPlan === true, fromCook: fromPlan === 'cook',
+      canOnce: !f && (fromPlan === true || fromPlan === 'cook'), more: false };
     render();
   }
   function sheetHtml() {
@@ -1109,7 +1160,7 @@ svg{display:block}
     else if (s.kind === 'add') h += '<h2 id="sheetTitle" class="h1" style="font-size:26px">Add to this meal</h2>' +
       '<label class="sr" for="addSearch">Search your foods</label><input id="addSearch" class="input" type="search" enterkeyhint="search" placeholder="Search your foods" value="' + esc(ui.addSearch || '') + '" autocomplete="off">' +
       '<div class="picker" id="addResults" style="max-height:none">' + pickList(ui.addSearch || '', 'meal') + '</div>' +
-      (foods.length && !(ui.addSearch || '').trim() ? '<button class="btn ghost" data-act="newFromCook">' + icon('plus') + 'A food that isn’t on your list</button>' : '') +
+      (foods.length && !(ui.addSearch || '').trim() ? '<button class="btn ghost" data-act="newFromCook">' + icon('plus') + 'Quick timer or a new food</button>' : '') +
       '<div class="foot"><button class="btn" data-act="sheetCancel">Close</button></div>';
     else if (s.kind === 'meals') h += '<h2 id="sheetTitle" class="h1" style="font-size:26px">Saved meals</h2>' +
       (saved.length ? '<div class="stk fd-group">' + saved.map(function (m) {
@@ -1123,13 +1174,15 @@ svg{display:block}
   function foodSheet(s) {
     var names = groups(foods).map(function (g) { return '<option value="' + esc(g.name) + '">'; }).join('');
     var custom = VERBS.indexOf(s.nText) < 0;
-    return '<h2 id="sheetTitle" class="h1" style="font-size:26px">' + (s.id ? 'Edit food' : 'New food') + '</h2>' +
-      '<div class="field"><label class="label" for="fFood">Food</label><input id="fFood" class="input" list="foodNames" value="' + esc(s.food) + '" placeholder="e.g. Pizza" autocomplete="off" autocapitalize="words"><datalist id="foodNames">' + names + '</datalist></div>' +
+    var extras = !s.canOnce || s.more;
+    return '<h2 id="sheetTitle" class="h1" style="font-size:26px">' + (s.id ? 'Edit food' : s.canOnce ? 'Add a food' : 'New food') + '</h2>' +
+      '<div class="field"><label class="label" for="fFood">Food</label><input id="fFood" class="input" list="foodNames" value="' + esc(s.food) + '" placeholder="' + (s.canOnce ? 'e.g. Pizza (blank for a plain timer)' : 'e.g. Pizza') + '" autocomplete="off" autocapitalize="words"><datalist id="foodNames">' + names + '</datalist></div>' +
       '<div class="field"><span class="label">Cooked in</span><div class="devgrid" role="group" aria-label="Device">' + DEVICES.map(function (d) {
         return '<button class="chip" data-act="sheetDev" data-d="' + d + '" aria-pressed="' + (s.device === d) + '">' + devIcon(d, '') + d + '</button>';
       }).join('') + '</div></div>' +
       '<div class="field"><label class="label" for="fMinutes">Minutes</label><div class="minrow"><button class="btn" data-act="sheetMin" data-d="-1" aria-label="One minute less">−1</button><input id="fMinutes" class="input num" type="number" inputmode="numeric" pattern="[0-9]*" min="1" max="600" step="1" value="' + esc(s.minutes) + '"><button class="btn" data-act="sheetMin" data-d="1" aria-label="One minute more">+1</button><button class="btn" data-act="sheetMin" data-d="5" aria-label="Five minutes more">+5</button></div></div>' +
-      '<div class="field"><label class="label" for="fNotes">Notes</label><input id="fNotes" class="input" value="' + esc(s.notes) + '" placeholder="e.g. 200°C, middle shelf"></div>' +
+      (extras ? '' : '<button class="btn ghost" data-act="sheetMore">' + icon('plus') + 'Notes, nudge and alert sound</button>') +
+      (!extras ? '' : '<div class="field"><label class="label" for="fNotes">Notes</label><input id="fNotes" class="input" value="' + esc(s.notes) + '" placeholder="e.g. 200°C, middle shelf"></div>' +
       '<div class="field"><span class="label">Nudge (optional)</span><span class="lead" style="margin:0;font-size:14px">A reminder part-way through, like “shake the fries”.</span>' +
       '<div class="seg three" role="group" aria-label="Nudge timing">' + [['none', 'None'], ['half', 'Halfway'], ['at', 'Set time']].map(function (o) {
         return '<button data-act="sheetNudge" data-m="' + o[0] + '" aria-pressed="' + (s.nMode === o[0]) + '">' + o[1] + '</button>';
@@ -1141,10 +1194,33 @@ svg{display:block}
       '<div class="field"><span class="label">Alert sound</span><span class="lead" style="margin:0;font-size:14px">Tap to hear it. Give foods different tunes so you know which one needs you without looking.</span>' +
       '<div class="tunegrid" role="group" aria-label="Alert sound"><button class="chip" data-act="sheetSound" data-s="" aria-pressed="' + !s.sound + '">' + icon('note') + 'Auto</button>' + TUNES.map(function (tn) {
         return '<button class="chip" data-act="sheetSound" data-s="' + tn.id + '" aria-pressed="' + (s.sound === tn.id) + '">' + icon('play') + tn.name + '</button>';
-      }).join('') + '</div></div>' +
+      }).join('') + '</div></div>') +
       (s.err ? '<div class="note warn"><span>' + esc(s.err) + '</span></div>' : '') +
-      '<div class="foot"><button class="btn" data-act="sheetCancel">Cancel</button><button class="btn primary" data-act="sheetSave">' + (s.fromPlan || s.fromCook ? 'Save and add' : 'Save') + '</button></div>' +
+      (s.canOnce
+        ? '<div class="foot"><button class="btn" data-act="sheetOnce">Just this once</button><button class="btn primary" data-act="sheetSave">Save to my foods</button></div>' +
+          '<button class="btn ghost" data-act="sheetCancel">Cancel</button>'
+        : '<div class="foot"><button class="btn" data-act="sheetCancel">Cancel</button><button class="btn primary" data-act="sheetSave">Save</button></div>') +
       (s.id ? '<button class="btn ghost" data-act="sheetDelete">Delete this one</button>' : '');
+  }
+  // Checks the food editor and turns it into a food record, or sets an error message and returns null.
+  function sheetRecord(s, once) {
+    var mn = parseInt(s.minutes, 10), name = String(s.food).trim();
+    if (!name && once) name = 'Timer';
+    if (!name) { s.err = 'Give the food a name.'; return null; }
+    if (!(mn >= 1 && mn <= 600) || String(mn) !== String(s.minutes).trim()) { s.err = 'Minutes must be a whole number from 1 to 600.'; return null; }
+    var nudge = null;
+    if (s.nMode !== 'none') {
+      nudge = { mode: s.nMode, text: String(s.nText || 'Shake').trim() || 'Shake' };
+      if (s.nMode === 'at') {
+        var am = parseInt(s.nAt, 10);
+        if (!(am >= 1 && am < mn) || String(am) !== String(s.nAt).trim()) { s.err = 'The nudge needs to be a whole number of minutes, less than the ' + mn + ' min cooking time.'; return null; }
+        nudge.atMin = am;
+      } else if (mn < 2) { s.err = 'A halfway nudge needs at least 2 minutes of cooking.'; return null; }
+    }
+    var rec = { id: s.id || uid(), food: name, device: s.device, minutes: mn, notes: String(s.notes || '').trim() };
+    if (nudge) rec.nudge = nudge;
+    if (s.sound) rec.sound = s.sound;
+    return rec;
   }
   function readSheet() {
     var s = ui.sheet; if (!s) return;
@@ -1243,7 +1319,7 @@ svg{display:block}
     if (meal) requestWake();
   }
   // Actions that change nothing worth undoing keep any pending Undo; everything else replaces or clears it.
-  var KEEPS_UNDO = { nav: 1, mute: 1, hideInstall: 1, filter: 1, editServe: 1, big: 1, unbig: 1, manageMeals: 1, newFood: 1, editFood: 1, newFromPlan: 1, saveMeal: 1, saveMealFromCook: 1, sheetCancel: 1, sheetScrim: 1, sheetDev: 1, sheetMin: 1, sheetNudge: 1, sheetVerb: 1, sheetSound: 1, dismiss: 1, addOpen: 1, newFromCook: 1, split: 1, merge: 1, undo: 1 };
+  var KEEPS_UNDO = { nav: 1, mute: 1, hideInstall: 1, filter: 1, editServe: 1, big: 1, unbig: 1, manageMeals: 1, newFood: 1, editFood: 1, newFromPlan: 1, saveMeal: 1, saveMealFromCook: 1, sheetCancel: 1, sheetScrim: 1, sheetDev: 1, sheetMin: 1, sheetNudge: 1, sheetVerb: 1, sheetSound: 1, sheetMore: 1, dismiss: 1, addOpen: 1, newFromCook: 1, split: 1, merge: 1, undo: 1 };
 
   // Add a food to the meal that's already cooking. It slots into the same schedule: in "Finish together"
   // a food too long to make the current time moves dinner back; in "Keep dinner time" it shows as late.
@@ -1252,15 +1328,17 @@ svg{display:block}
     var color = 0; while (used.indexOf(color) >= 0 && color < COLORS.length) color++;
     var it = { id: uid(), food: f.food, device: f.device, notes: f.notes || '', baseMs: f.minutes * MIN, adjustMs: 0, startedAt: null, doneAt: null,
       color: color % COLORS.length, nudge: clone(f.nudge) || null, nudgedAt: null, sound: f.sound || null };
-    meal.items.push(it); prevStatus[it.id] = 'waiting'; // so a food that must start right away still alerts
-    countUse(f.id, now); saveFoods(); saveMeal(); ui.view = 'cook';
+    meal.items.push(it); prevStatus[it.id] = 'waiting';
+    if (f.id) countUse(f.id, now); saveFoods(); saveMeal(); ui.view = 'cook';
+    if (autoStart(now)) return f.food + ' added · timer started, put it in now';
     var r = rowOf(E.computeSchedule(meal, now), it.id);
-    return f.food + ' added · ' + (r.countdownMs > 1000 ? 'start ' + clock(r.startAt) : 'start it now');
+    return f.food + ' added · goes in at ' + clock(r.startAt);
   }
 
   /* ---------- actions ---------- */
   function act(a, el) {
     var now = Date.now(), id = el.getAttribute('data-id'), it, before = snapshot(), undoMsg = null;
+    var anchor = !NO_ANCHOR[a] && $main.contains(el) ? { sel: anchorSel(el), top: el.getBoundingClientRect().top } : null;
     haptic();
     switch (a) {
       case 'nav': if (el.getAttribute('data-v') === 'plan') freshenTime(now); if (ui.view !== el.getAttribute('data-v')) { ui.view = el.getAttribute('data-v'); $main.scrollTop = 0; } else { try { $main.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { $main.scrollTop = 0; } } break;
@@ -1271,8 +1349,8 @@ svg{display:block}
       case 'big': ui.big = true; prefs.big = true; save(K.prefs, prefs); $main.scrollTop = 0; requestWake(); break;
       case 'unbig': ui.big = false; prefs.big = false; save(K.prefs, prefs); $main.scrollTop = 0; break;
       // cooking
-      case 'start': it = itemOf(id); if (!it) return; it.startedAt = now; it.doneAt = null; saveMeal(); undoMsg = it.food + ': on!'; break;
-      case 'unstart': it = itemOf(id); if (!it) return; it.startedAt = null; it.doneAt = null; it.nudgedAt = null; saveMeal(); break;
+      case 'start': it = itemOf(id); if (!it) return; it.startedAt = now; it.held = false; it.doneAt = null; saveMeal(); undoMsg = it.food + ': timer started'; break;
+      case 'hold': case 'unstart': it = itemOf(id); if (!it) return; it.startedAt = null; it.held = true; it.doneAt = null; it.nudgedAt = null; saveMeal(); undoMsg = it.food + ' paused · tap It’s in! when it is'; break;
       case 'done': it = itemOf(id); if (!it) return; if (it.startedAt == null) it.startedAt = now - E.durationOf(it); it.doneAt = now; saveMeal(); undoMsg = it.food + ': done!'; break;
       case 'undone': it = itemOf(id); if (!it) return; it.doneAt = null; saveMeal(); break;
       case 'nudgeDone': it = itemOf(id); if (!it) return; it.nudgedAt = now; saveMeal(); undoMsg = 'Nice. Back to cooking'; break;
@@ -1337,13 +1415,16 @@ svg{display:block}
       case 'deleteMeal': { var dm = saved.filter(function (x) { return x.id === id; })[0]; saved = saved.filter(function (x) { return x.id !== id; }); saveSaved(); undoMsg = 'Deleted “' + (dm ? dm.name : 'meal') + '”'; break; }
       case 'startMeal': {
         var target = draftTarget(now); if (target == null || !draft.items.length) return;
-        target = Math.max(target, asapAt(now)); // a time that can't be met any more means as soon as possible
+        // As soon as possible means the longest food starts the moment you tap; a time that can't be met any more means the same.
+        var longest = Math.max.apply(null, draft.items.map(function (d) { return d.minutes * MIN; }));
+        target = draft.auto ? now + longest : Math.max(target, now + longest);
         var replaced = live(now);
         meal = { id: uid(), createdAt: now, targetAt: target, mode: draft.mode, items: draft.items.map(function (d, i) {
           return { id: uid(), food: d.food, device: d.device, notes: d.notes, baseMs: d.minutes * MIN, adjustMs: 0, startedAt: null, doneAt: null, color: i % COLORS.length, nudge: d.nudgeOff ? null : clone(d.nudge) || null, nudgedAt: null, sound: d.sound || null };
         }) };
         draft.items.forEach(function (d) { countUse(d.entryId, now); }); saveFoods();
         draft.example = false; saveDraft(); saveMeal(); prevStatus = {}; ui.view = 'cook'; ui.editServe = false; $main.scrollTop = 0; unlockAudio(); requestWake();
+        autoStart(now);
         if (replaced) undoMsg = 'Previous meal replaced';
         break;
       }
@@ -1359,22 +1440,15 @@ svg{display:block}
       case 'sheetCancel': ui.sheet = null; break;
       case 'sheetScrim': if (el !== lastTarget) return; ui.sheet = null; break;
       case 'sheetDelete': { var gid = ui.sheet.id, gf = foods.filter(function (x) { return x.id === gid; })[0]; foods = foods.filter(function (x) { return x.id !== gid; }); saveFoods(); ui.sheet = null; undoMsg = 'Deleted ' + (gf ? gf.food + ' (' + gf.device + ')' : 'food'); break; }
+      case 'sheetMore': readSheet(); ui.sheet.more = true; break;
+      case 'sheetOnce': { // a one-off: goes into this meal without being saved to your foods
+        readSheet(); var so = ui.sheet, one = sheetRecord(so, true); if (!one) break;
+        one.id = null; ui.sheet = null;
+        if (so.fromCook && meal) { undoMsg = addFoodToMeal(one, now); ui.addSearch = ''; break; }
+        draft.items.push(draftItemFrom(one)); draft.example = false; ui.pickSearch = ''; saveDraft(); toast(one.food + ' added, just for this meal'); break;
+      }
       case 'sheetSave': {
-        readSheet(); var s = ui.sheet, mn = parseInt(s.minutes, 10), name = String(s.food).trim();
-        if (!name) { s.err = 'Give the food a name.'; break; }
-        if (!(mn >= 1 && mn <= 600) || String(mn) !== String(s.minutes).trim()) { s.err = 'Minutes must be a whole number from 1 to 600.'; break; }
-        var nudge = null;
-        if (s.nMode !== 'none') {
-          nudge = { mode: s.nMode, text: String(s.nText || 'Shake').trim() || 'Shake' };
-          if (s.nMode === 'at') {
-            var am = parseInt(s.nAt, 10);
-            if (!(am >= 1 && am < mn) || String(am) !== String(s.nAt).trim()) { s.err = 'The nudge needs to be a whole number of minutes, less than the ' + mn + ' min cooking time.'; break; }
-            nudge.atMin = am;
-          } else if (mn < 2) { s.err = 'A halfway nudge needs at least 2 minutes of cooking.'; break; }
-        }
-        var rec = { id: s.id || uid(), food: name, device: s.device, minutes: mn, notes: String(s.notes).trim() };
-        if (nudge) rec.nudge = nudge;
-        if (s.sound) rec.sound = s.sound;
+        readSheet(); var s = ui.sheet, rec = sheetRecord(s, false); if (!rec) break;
         if (s.id) foods = foods.map(function (x) { return x.id === s.id ? rec : x; }); else foods.push(rec);
         saveFoods();
         // keep tonight's line-up in step with the edit
@@ -1388,7 +1462,16 @@ svg{display:block}
     if (undoMsg) { undo = before; toast(undoMsg, true); }
     else if (!KEEPS_UNDO[a] && undo) { undo = null; if ($toast.querySelector('.has-undo')) $toast.innerHTML = ''; }
     render();
+    if (anchor) { // content above may have grown or shrunk: scroll so what you tapped stays where it was
+      var ne = $main.querySelector(anchor.sel);
+      if (ne) { var d = ne.getBoundingClientRect().top - anchor.top; if (Math.abs(d) > 1) $main.scrollTop += d; }
+    }
     syncBanners(Date.now()); // a banner whose moment was just handled goes away
+  }
+  var NO_ANCHOR = { nav: 1, startMeal: 1, endMeal: 1, loadMeal: 1, big: 1, unbig: 1, undo: 1 };
+  function anchorSel(el) {
+    var q = function (v) { return window.CSS && CSS.escape ? CSS.escape(v) : String(v).replace(/"/g, '\\"'); };
+    return ['data-act', 'data-id', 'data-i', 'data-d', 'data-v', 'data-m', 'data-q', 'data-s'].map(function (n) { return el.hasAttribute(n) ? '[' + n + '="' + q(el.getAttribute(n)) + '"]' : ''; }).join('');
   }
 
   var lastTarget = null;
@@ -1478,14 +1561,15 @@ svg{display:block}
   /* ---------- alert banners: drop down from the top when something needs you ---------- */
   var $banners = document.createElement('div'); $banners.className = 'banners'; $banners.setAttribute('aria-live', 'assertive'); document.body.appendChild($banners);
   var banners = []; // { key, id, type, born }
-  var BANNER_LIFE = { start: 120000, ready: 120000, nudge: 120000, soon: 8000 };
+  var BANNER_LIFE = { start: 120000, auto: 60000, ready: 120000, nudge: 120000, soon: 8000 };
   function bannerHtml(bn, s) {
     var it = itemOf(bn.id), r = rowOf(s, bn.id); if (!it || !r) return '';
     var title, sub, btn = '';
     if (bn.type === 'start') { title = 'Start the ' + it.food + '!'; sub = it.device + ' · ready ' + clock(r.finishAt); btn = '<button class="btn sm go" data-act="start" data-id="' + it.id + '">It’s in!</button>'; }
+    else if (bn.type === 'auto') { title = 'Put the ' + it.food + ' in now!'; sub = 'Timer’s running · ready ' + clock(r.finishAt); btn = '<button class="btn sm" data-act="hold" data-id="' + it.id + '">Not in yet</button>'; }
     else if (bn.type === 'ready') { title = 'Grab the ' + it.food + '!'; sub = 'Ready since ' + clock(r.finishAt); btn = '<button class="btn sm yes" data-act="done" data-id="' + it.id + '">Got it</button>'; }
     else if (bn.type === 'nudge') { title = nudgePhrase(it) + '!'; sub = 'Then back in · ready ' + clock(r.finishAt); btn = '<button class="btn sm go" data-act="nudgeDone" data-id="' + it.id + '">Done</button>'; }
-    else { title = it.food + ' in 1 minute'; sub = 'Get the ' + it.device.toLowerCase() + ' ready'; }
+    else { title = it.food + ' goes in in 1 minute'; sub = 'Get the ' + it.device.toLowerCase() + ' ready'; }
     return '<div class="bn" data-key="' + bn.key + '" style="--c:' + colorOf(it) + '"><span class="bn-c">' + (bn.type === 'nudge' ? icon('bell') : devIcon(it.device, '')) + '</span>' +
       '<div class="bn-t"><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></div>' + btn +
       '<button class="bn-x" data-act="dismiss" data-key="' + bn.key + '" aria-label="Dismiss">' + icon('x') + '</button></div>';
@@ -1494,6 +1578,7 @@ svg{display:block}
   function bannerLive(bn, s, now) {
     var r = meal && rowOf(s, bn.id); if (!r || now - bn.born > BANNER_LIFE[bn.type]) return false;
     if (bn.type === 'start') return r.status === 'start';
+    if (bn.type === 'auto') return r.status === 'cooking' && !r.nudgeDue;
     if (bn.type === 'ready') return r.status === 'ready';
     if (bn.type === 'nudge') return r.nudgeDue;
     return r.status === 'waiting';
@@ -1504,7 +1589,7 @@ svg{display:block}
     // In big-screen view the food's own tile lights up instead, so banners don't cover the bar's buttons.
     var html = bigOn() ? '' : keep.slice(-3).map(function (bn) { return bannerHtml(bn, s); }).join('');
     banners = keep;
-    if ($banners._h !== html) { $banners.innerHTML = html; $banners._h = html; }
+    if ($banners._h !== html) { patch($banners, html); $banners._h = html; } // new banners drop in; existing ones stay put
   }
   function addBanner(id, type, now) {
     var key = id + ':' + type;
@@ -1521,6 +1606,29 @@ svg{display:block}
     else { el.style.transform = ''; el.style.opacity = ''; }
   });
 
+  // Foods start themselves. When a food's start time comes, its timer starts on its own and Ding! plays its tune and
+  // says to put it in. Caught on time, the timer counts from the planned moment; if the app was closed and missed it,
+  // it counts from now. "Not in yet" pauses a food until you tap "It's in!".
+  var AUTO_WINDOW = 30000;
+  function autoStart(now) {
+    if (!meal) return false;
+    var s = E.computeSchedule(meal, now), started = [];
+    // The planned serving time, ignoring the tiny delay between the start moment and this check, so a food caught
+    // on time counts from exactly its planned start and dinner doesn't creep back.
+    var plan = meal.targetAt;
+    if (meal.mode !== 'keep') meal.items.forEach(function (x) { if (x.doneAt == null && x.startedAt != null) plan = Math.max(plan, x.startedAt + E.durationOf(x)); });
+    s.rows.forEach(function (r) {
+      var it = itemOf(r.id);
+      if (r.status !== 'start' || it.held || it.startedAt != null) return;
+      var planned = plan - E.durationOf(it);
+      it.startedAt = now >= planned && now - planned < AUTO_WINDOW ? planned : now; it.doneAt = null;
+      started.push(it);
+    });
+    if (!started.length) return false;
+    saveMeal();
+    started.forEach(function (it, i) { addBanner(it.id, 'auto', now); if (i === 0) alertSound('start', it); prevStatus[it.id] = 'cooking'; });
+    return true;
+  }
   function checkAlerts(now) {
     if (!meal) { if (banners.length) { banners = []; syncBanners(now); } return; }
     var s = sched(now), first = !Object.keys(prevStatus).length;
@@ -1540,6 +1648,7 @@ svg{display:block}
   /* ---------- clock ---------- */
   function tick() {
     var now = Date.now();
+    autoStart(now);
     checkAlerts(now);
     var focusInView = document.activeElement && $view.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName);
     if (!ui.sheet && !focusInView && structureKey(now) !== lastKey) render(); else bind(now);
